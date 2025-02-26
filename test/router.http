@@ -1,0 +1,14 @@
+### GET test get router
+GET http://localhost:8080/user/name/fejisfej/getname
+
+### GET test get router
+GET http://localhost:8080/user/name/1
+
+### DELETE test delete router
+DELETE http://localhost:8080/user/name
+
+### PUT test put router
+PUT http://localhost:8080/user/name
+
+### POST test post router
+POST http://localhost:8080/user/name
