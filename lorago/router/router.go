@@ -119,6 +119,22 @@ func (r *routerGroup) PreHandleMiddleware(middlewares ...MiddlewareFunc) {
 func (r *routerGroup) PostHandleMiddleware(middlewares ...MiddlewareFunc) {
 	r.postMiddleWare = append(r.postMiddleWare, middlewares...)
 }
+func (r *routerGroup) MiddlewareHandleFunc(ctx *Context, hanldefunc HandleFunc) {
+	//调用前置中间件
+	if r.preMiddleWare != nil {
+		for _, middlewareFunc := range r.preMiddleWare {
+			hanldefunc = middlewareFunc(hanldefunc)
+		}
+	}
+	hanldefunc(ctx)
+	//调用后置中间件
+	if r.postMiddleWare != nil {
+		for _, middlewareFunc := range r.postMiddleWare {
+			hanldefunc = middlewareFunc(hanldefunc)
+			hanldefunc(ctx)
+		}
+	}
+}
 
 // 这里是直接嵌入了类型，所以Engine继承了router的方法和成员
 type Engine struct {
@@ -140,12 +156,12 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			ctx := &Context{R: r, W: w}
 			handle, ok := group.handlerMap[node.routerName][ANY]
 			if ok {
-				handle(ctx)
+				group.MiddlewareHandleFunc(ctx, handle)
 				return
 			}
 			handle, ok = group.handlerMap[node.routerName][method]
 			if ok {
-				handle(ctx)
+				group.MiddlewareHandleFunc(ctx, handle)
 				return
 			}
 			//如果各个方法的路由中都找不到对应的路由就返回405
