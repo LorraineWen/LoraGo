@@ -1,8 +1,8 @@
 ### GET test get router
-GET http://localhost:8080/user/name
+GET http://localhost:8080/user/index
 
 ### GET test get router
-GET http://localhost:8080/user/name1
+GET http://localhost:8080/user/login
 
 ### DELETE test delete router
 DELETE http://localhost:8080/user/name

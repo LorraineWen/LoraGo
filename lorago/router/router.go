@@ -1,18 +1,19 @@
 package router
 
-/*
-*@Author: LorraineWen
-*@Date: 2025/2/23 14:23:49
-*该文件主要实现处理http请求的路由，包括路由分组，支持不同请求方法(不同路径和同一路径)
-*支持动态路由(/user/get/:id，支持通配符/static/**
-*支持前置中间件和后置中间件
- */
 import (
 	"fmt"
 	"github.com/LorraineWen/lorago/util"
 	"net/http"
 )
 
+/*
+*@Author: LorraineWen
+*@Date: 2025/2/23
+*该文件主要实现处理http请求的路由，包括路由分组，支持不同请求方法(不同路径和同一路径)
+*支持动态路由(/user/get/:id，支持通配符/static/**
+*支持前置中间件和后置中间件，并将两者合并
+*支持组路由中间件和单个路由中间件
+ */
 const (
 	POST    = http.MethodPost
 	GET     = http.MethodGet
@@ -24,10 +25,6 @@ const (
 	HEAD    = http.MethodHead
 )
 
-type Context struct {
-	W http.ResponseWriter
-	R *http.Request
-}
 type HandleFunc func(ctx *Context)
 
 type router struct {

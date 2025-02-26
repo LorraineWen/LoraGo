@@ -3,7 +3,13 @@ package main
 import (
 	"fmt"
 	lorago "github.com/LorraineWen/lorago/router"
+	"html/template"
+	"os"
 )
+
+type User struct {
+	Name string
+}
 
 func m1(next lorago.HandleFunc) lorago.HandleFunc {
 	return func(ctx *lorago.Context) {
@@ -17,12 +23,28 @@ func m1(next lorago.HandleFunc) lorago.HandleFunc {
 }
 func main() {
 	engine := lorago.New()
+	fmt.Println(os.Getwd())
 	userGroup := engine.Group("user")
 	userGroup.Get("/name", func(context *lorago.Context) {
 		fmt.Fprintln(context.W, "get amie")
 	}, m1)
-	userGroup.Get("/name1", func(context *lorago.Context) {
-		fmt.Fprintln(context.W, "get amie")
+	userGroup.Get("/index", func(context *lorago.Context) {
+		user := &User{
+			Name: "amie",
+		}
+		err := context.HtmlTemplate("login.html", template.FuncMap{}, user, "../test/template/login.html", "../test/template/header.html")
+		if err != nil {
+			fmt.Fprintln(context.W, err)
+		}
+	})
+	userGroup.Get("/login", func(context *lorago.Context) {
+		user := &User{
+			Name: "amie",
+		}
+		err := context.HtmlTemplateGlob("login.html", template.FuncMap{}, "../test/template/*.html", user)
+		if err != nil {
+			fmt.Fprintln(context.W, err)
+		}
 	})
 	//userGroup.Use(func(next lorago.HandleFunc) lorago.HandleFunc {
 	//	return func(ctx *lorago.Context) {
