@@ -1,7 +1,7 @@
 package main
 
 import (
-	lorago "github.com/LorraineWen/lorago"
+	lorago "github.com/LorraineWen/lorago/router"
 )
 
 func main() {

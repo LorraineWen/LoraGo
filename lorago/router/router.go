@@ -1,10 +1,11 @@
-package lorago
+package router
 
 /*
 *@Author: LorraineWen
 *@Date: 2025/2/23 14:23:49
 *该文件主要实现处理http请求的路由，包括路由分组，支持不同请求方法(不同路径和同一路径)
 *支持动态路由(/user/get/:id，支持通配符/static/**
+*支持前置中间件和后置中间件
  */
 import (
 	"fmt"
@@ -45,13 +46,17 @@ func (r *router) Group(name string) *routerGroup {
 	return g
 }
 
+type MiddlewareFunc func(handleFunc HandleFunc) HandleFunc
 type routerGroup struct {
 	groupName  string
 	handlerMap map[string]map[string]HandleFunc //路由对应的方法对应的处理函数
 	//getname:post:postnamefunc
 	//getname:get:getnamefunc
 	//getname:delete:deletenamefunc
-	trieNode *trieNode
+	trieNode       *trieNode
+	middleWareMap  map[string]map[string][]MiddlewareFunc
+	preMiddleWare  []MiddlewareFunc //前置中间件
+	postMiddleWare []MiddlewareFunc //后置中间件
 }
 
 func (r *routerGroup) MethodHandle(name string, method string, handleFunc HandleFunc) {
@@ -103,6 +108,16 @@ func (r *routerGroup) Head(name string, handlerFunc HandleFunc) {
 // OPTIONS类型的路由
 func (r *routerGroup) Options(name string, handlerFunc HandleFunc) {
 	r.MethodHandle(name, OPTIONS, handlerFunc)
+}
+
+// 前置中间件注册函数:路由组级别注册
+func (r *routerGroup) PreHandleMiddleware(middlewares ...MiddlewareFunc) {
+	r.preMiddleWare = append(r.preMiddleWare, middlewares...)
+}
+
+// 后置中间件注册函数:路由组级别注册
+func (r *routerGroup) PostHandleMiddleware(middlewares ...MiddlewareFunc) {
+	r.postMiddleWare = append(r.postMiddleWare, middlewares...)
 }
 
 // 这里是直接嵌入了类型，所以Engine继承了router的方法和成员
