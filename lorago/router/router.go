@@ -123,10 +123,14 @@ func (r *routerGroup) MiddlewareHandleFunc(ctx *Context, hanldefunc HandleFunc) 
 	//调用前置中间件
 	if r.preMiddleWare != nil {
 		for _, middlewareFunc := range r.preMiddleWare {
+			//一开始handlefunc就是/user/name的请求处理函数，获取第一个中间件的处理函数之后
+			//handlefunc就变成了第一个中间件的处理函数，接着变成第二个中间件的处理函数
 			hanldefunc = middlewareFunc(hanldefunc)
 		}
 	}
-	hanldefunc(ctx)
+	hanldefunc(ctx) //这个handlefunc调用的是最后一个中间件的处理函数，最后一个中间件的处理函数的next调用的则是倒数第二个中间件的处理函数
+	//所以前置中间件的执行顺序和注册顺序是相反的
+
 	//调用后置中间件
 	if r.postMiddleWare != nil {
 		for _, middlewareFunc := range r.postMiddleWare {
