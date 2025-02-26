@@ -14,6 +14,7 @@ import (
 type Context struct {
 	W http.ResponseWriter
 	R *http.Request
+	e *Engine //用于获取模板渲染函数
 }
 
 // 渲染HTML需要明确content-type和charset
@@ -53,6 +54,16 @@ func (ctx *Context) HtmlTemplateGlob(name string, funcMap template.FuncMap, patt
 	}
 	ctx.W.Header().Set("Content-Type", "text/html; charset=utf-8")
 	err = t.Execute(ctx.W, data)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// 支持提前将模板加载到内存中
+func (c *Context) Template(name string, data any) error {
+	c.W.Header().Set("Content-Type", "text/html; charset=utf-8")
+	err := c.e.htmlRender.Template.ExecuteTemplate(c.W, name, data)
 	if err != nil {
 		return err
 	}

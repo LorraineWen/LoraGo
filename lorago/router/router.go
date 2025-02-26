@@ -2,7 +2,9 @@ package router
 
 import (
 	"fmt"
+	"github.com/LorraineWen/lorago/router/render"
 	"github.com/LorraineWen/lorago/util"
+	"html/template"
 	"net/http"
 )
 
@@ -134,10 +136,22 @@ func (r *routerGroup) MiddlewareHandleFunc(ctx *Context, name, method string, ha
 // 这里是直接嵌入了类型，所以Engine继承了router的方法和成员
 type Engine struct {
 	*router
+	funcMap    template.FuncMap  //设置html模板渲染时所需要的函数
+	htmlRender render.HTMLRender //在内存中存放html模板
 }
 
 func New() *Engine {
-	return &Engine{&router{}}
+	return &Engine{router: &router{}}
+}
+func (e *Engine) SetFuncMap(funcMap template.FuncMap) {
+	e.funcMap = funcMap
+}
+func (e *Engine) LoadTemplate(pattern string) {
+	t := template.Must(template.New("").Funcs(e.funcMap).ParseGlob(pattern))
+	e.setHtmlTemplate(t)
+}
+func (e *Engine) setHtmlTemplate(t *template.Template) {
+	e.htmlRender = render.HTMLRender{Template: t}
 }
 func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	method := r.Method
@@ -148,7 +162,7 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		//对于/user/getname/1,routerName=/getname/1
 		//node.routerName=/get/name/:id，这也是我们实际注册的路由，所应该应该使用node.routerName来索引得到处理routerName的函数
 		if node != nil && node.isEnd {
-			ctx := &Context{R: r, W: w}
+			ctx := &Context{R: r, W: w, e: e}
 			handle, ok := group.handlerMap[node.routerName][ANY]
 			if ok {
 				group.MiddlewareHandleFunc(ctx, node.routerName, method, handle)
