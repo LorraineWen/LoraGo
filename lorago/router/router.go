@@ -36,8 +36,9 @@ type router struct {
 
 func (r *router) Group(name string) *routerGroup {
 	g := &routerGroup{
-		groupName:  name,
-		handlerMap: make(map[string]map[string]HandleFunc),
+		groupName:          name,
+		handlerMap:         make(map[string]map[string]HandleFunc),
+		middlewaresFuncMap: make(map[string]map[string][]MiddlewareFunc),
 		trieNode: &trieNode{
 			name:     "/",
 			children: make([]*trieNode, 0)},
@@ -53,68 +54,70 @@ type routerGroup struct {
 	//getname:post:postnamefunc
 	//getname:get:getnamefunc
 	//getname:delete:deletenamefunc
-	trieNode      *trieNode
-	middleWareMap map[string]map[string][]MiddlewareFunc
-	MiddleWare    []MiddlewareFunc //中间件
+	middlewaresFuncMap map[string]map[string][]MiddlewareFunc //适用于单个路由的中间件
+	MiddleWare         []MiddlewareFunc                       //适用于组路由中间件
+	trieNode           *trieNode
 }
 
-func (r *routerGroup) MethodHandle(name string, method string, handleFunc HandleFunc) {
+func (r *routerGroup) MethodHandle(name string, method string, handleFunc HandleFunc, middlewareFunc ...MiddlewareFunc) {
 	if _, ok := r.handlerMap[name]; !ok {
 		r.handlerMap[name] = make(map[string]HandleFunc)
+		r.middlewaresFuncMap[name] = make(map[string][]MiddlewareFunc)
 	}
 	if _, ok := r.handlerMap[name][method]; ok {
 		panic("该路由已经注册过了")
 	}
 	r.handlerMap[name][method] = handleFunc
+	r.middlewaresFuncMap[name][method] = append(r.middlewaresFuncMap[name][method], middlewareFunc...)
 	r.trieNode.put(name)
 }
 
 // ANY类型的路由
-func (r *routerGroup) Any(name string, handlerFunc HandleFunc) {
-	r.MethodHandle(name, ANY, handlerFunc)
+func (r *routerGroup) Any(name string, handlerFunc HandleFunc, middlewareFunc ...MiddlewareFunc) {
+	r.MethodHandle(name, ANY, handlerFunc, middlewareFunc...)
 }
 
 // GET类型的路由
-func (r *routerGroup) Get(name string, handlerFunc HandleFunc) {
-	r.MethodHandle(name, GET, handlerFunc)
+func (r *routerGroup) Get(name string, handlerFunc HandleFunc, middlewareFunc ...MiddlewareFunc) {
+	r.MethodHandle(name, GET, handlerFunc, middlewareFunc...)
 }
 
 // POST类型的路由
-func (r *routerGroup) Post(name string, handlerFunc HandleFunc) {
-	r.MethodHandle(name, POST, handlerFunc)
+func (r *routerGroup) Post(name string, handlerFunc HandleFunc, middlewareFunc ...MiddlewareFunc) {
+	r.MethodHandle(name, POST, handlerFunc, middlewareFunc...)
 }
 
 // DELETE类型的路由
-func (r *routerGroup) Delete(name string, handlerFunc HandleFunc) {
-	r.MethodHandle(name, DELETE, handlerFunc)
+func (r *routerGroup) Delete(name string, handlerFunc HandleFunc, middlewareFunc ...MiddlewareFunc) {
+	r.MethodHandle(name, DELETE, handlerFunc, middlewareFunc...)
 }
 
 // PUT类型的路由
-func (r *routerGroup) Put(name string, handlerFunc HandleFunc) {
-	r.MethodHandle(name, PUT, handlerFunc)
+func (r *routerGroup) Put(name string, handlerFunc HandleFunc, middlewareFunc ...MiddlewareFunc) {
+	r.MethodHandle(name, PUT, handlerFunc, middlewareFunc...)
 }
 
 // PATCH类型的路由
-func (r *routerGroup) Patch(name string, handlerFunc HandleFunc) {
-	r.MethodHandle(name, PATCH, handlerFunc)
+func (r *routerGroup) Patch(name string, handlerFunc HandleFunc, middlewareFunc ...MiddlewareFunc) {
+	r.MethodHandle(name, PATCH, handlerFunc, middlewareFunc...)
 }
 
 // HEAD类型的路由
-func (r *routerGroup) Head(name string, handlerFunc HandleFunc) {
-	r.MethodHandle(name, HEAD, handlerFunc)
+func (r *routerGroup) Head(name string, handlerFunc HandleFunc, middlewareFunc ...MiddlewareFunc) {
+	r.MethodHandle(name, HEAD, handlerFunc, middlewareFunc...)
 }
 
 // OPTIONS类型的路由
-func (r *routerGroup) Options(name string, handlerFunc HandleFunc) {
-	r.MethodHandle(name, OPTIONS, handlerFunc)
+func (r *routerGroup) Options(name string, handlerFunc HandleFunc, middlewareFunc ...MiddlewareFunc) {
+	r.MethodHandle(name, OPTIONS, handlerFunc, middlewareFunc...)
 }
 
 // 中间件注册函数:路由组级别注册
 func (r *routerGroup) Use(middlewares ...MiddlewareFunc) {
 	r.MiddleWare = append(r.MiddleWare, middlewares...)
 }
-func (r *routerGroup) MiddlewareHandleFunc(ctx *Context, hanldefunc HandleFunc) {
-	//前置中间件
+func (r *routerGroup) MiddlewareHandleFunc(ctx *Context, name, method string, hanldefunc HandleFunc) {
+	//路由组级别的中间件
 	if r.MiddleWare != nil {
 		for _, middlewareFunc := range r.MiddleWare {
 			//一开始handlefunc就是/user/name的请求处理函数，获取第一个中间件的处理函数之后
@@ -122,7 +125,13 @@ func (r *routerGroup) MiddlewareHandleFunc(ctx *Context, hanldefunc HandleFunc) 
 			hanldefunc = middlewareFunc(hanldefunc)
 		}
 	}
-	hanldefunc(ctx) //这个handlefunc调用的是最后一个中间件的处理函数，最后一个中间件的处理函数的next调用的则是倒数第二个中间件的处理函数
+	//路由级别的中间件
+	if r.middlewaresFuncMap[name][method] != nil {
+		for _, middlewareFunc := range r.middlewaresFuncMap[name][method] {
+			hanldefunc = middlewareFunc(hanldefunc)
+		}
+	}
+	hanldefunc(ctx) //这个handlefunc调用的是最后一个注册的中间件的处理函数，最后一个中间件的处理函数的next调用的则是倒数第二个中间件的处理函数
 }
 
 // 这里是直接嵌入了类型，所以Engine继承了router的方法和成员
@@ -145,12 +154,12 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			ctx := &Context{R: r, W: w}
 			handle, ok := group.handlerMap[node.routerName][ANY]
 			if ok {
-				group.MiddlewareHandleFunc(ctx, handle)
+				group.MiddlewareHandleFunc(ctx, node.routerName, method, handle)
 				return
 			}
 			handle, ok = group.handlerMap[node.routerName][method]
 			if ok {
-				group.MiddlewareHandleFunc(ctx, handle)
+				group.MiddlewareHandleFunc(ctx, node.routerName, method, handle)
 				return
 			}
 			//如果各个方法的路由中都找不到对应的路由就返回405

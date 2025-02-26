@@ -2,7 +2,7 @@
 GET http://localhost:8080/user/name
 
 ### GET test get router
-GET http://localhost:8080/user/name/1
+GET http://localhost:8080/user/name1
 
 ### DELETE test delete router
 DELETE http://localhost:8080/user/name
