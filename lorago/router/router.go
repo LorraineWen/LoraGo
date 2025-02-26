@@ -53,10 +53,9 @@ type routerGroup struct {
 	//getname:post:postnamefunc
 	//getname:get:getnamefunc
 	//getname:delete:deletenamefunc
-	trieNode       *trieNode
-	middleWareMap  map[string]map[string][]MiddlewareFunc
-	preMiddleWare  []MiddlewareFunc //前置中间件
-	postMiddleWare []MiddlewareFunc //后置中间件
+	trieNode      *trieNode
+	middleWareMap map[string]map[string][]MiddlewareFunc
+	MiddleWare    []MiddlewareFunc //中间件
 }
 
 func (r *routerGroup) MethodHandle(name string, method string, handleFunc HandleFunc) {
@@ -110,34 +109,20 @@ func (r *routerGroup) Options(name string, handlerFunc HandleFunc) {
 	r.MethodHandle(name, OPTIONS, handlerFunc)
 }
 
-// 前置中间件注册函数:路由组级别注册
-func (r *routerGroup) PreHandleMiddleware(middlewares ...MiddlewareFunc) {
-	r.preMiddleWare = append(r.preMiddleWare, middlewares...)
-}
-
-// 后置中间件注册函数:路由组级别注册
-func (r *routerGroup) PostHandleMiddleware(middlewares ...MiddlewareFunc) {
-	r.postMiddleWare = append(r.postMiddleWare, middlewares...)
+// 中间件注册函数:路由组级别注册
+func (r *routerGroup) Use(middlewares ...MiddlewareFunc) {
+	r.MiddleWare = append(r.MiddleWare, middlewares...)
 }
 func (r *routerGroup) MiddlewareHandleFunc(ctx *Context, hanldefunc HandleFunc) {
-	//调用前置中间件
-	if r.preMiddleWare != nil {
-		for _, middlewareFunc := range r.preMiddleWare {
+	//前置中间件
+	if r.MiddleWare != nil {
+		for _, middlewareFunc := range r.MiddleWare {
 			//一开始handlefunc就是/user/name的请求处理函数，获取第一个中间件的处理函数之后
 			//handlefunc就变成了第一个中间件的处理函数，接着变成第二个中间件的处理函数
 			hanldefunc = middlewareFunc(hanldefunc)
 		}
 	}
 	hanldefunc(ctx) //这个handlefunc调用的是最后一个中间件的处理函数，最后一个中间件的处理函数的next调用的则是倒数第二个中间件的处理函数
-	//所以前置中间件的执行顺序和注册顺序是相反的
-
-	//调用后置中间件
-	if r.postMiddleWare != nil {
-		for _, middlewareFunc := range r.postMiddleWare {
-			hanldefunc = middlewareFunc(hanldefunc)
-			hanldefunc(ctx)
-		}
-	}
 }
 
 // 这里是直接嵌入了类型，所以Engine继承了router的方法和成员

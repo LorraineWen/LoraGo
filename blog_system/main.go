@@ -11,30 +11,24 @@ func main() {
 	userGroup.Get("/name", func(context *lorago.Context) {
 		fmt.Fprintln(context.W, "get amie")
 	})
-	userGroup.PreHandleMiddleware(func(next lorago.HandleFunc) lorago.HandleFunc {
+	userGroup.Use(func(next lorago.HandleFunc) lorago.HandleFunc {
 		return func(ctx *lorago.Context) {
 			//这里才是中间件在做的事情
 			fmt.Fprintln(ctx.W, "Pre Handle1:")
 			//这个next就是/user/name对应的处理函数
 			next(ctx)
+			fmt.Fprintln(ctx.W, "Post Handle1:")
+			fmt.Fprintln(ctx.W, "Post Handle2:")
 		}
 	})
-	userGroup.PreHandleMiddleware(func(next lorago.HandleFunc) lorago.HandleFunc {
+	userGroup.Use(func(next lorago.HandleFunc) lorago.HandleFunc {
 		return func(ctx *lorago.Context) {
 			//这里才是中间件在做的事情
 			fmt.Fprintln(ctx.W, "Pre Handle2:")
 			//这个next就是/user/name对应的处理函数
 			next(ctx)
-		}
-	})
-	userGroup.PostHandleMiddleware(func(next lorago.HandleFunc) lorago.HandleFunc {
-		return func(ctx *lorago.Context) {
-			fmt.Fprintln(ctx.W, "Post Handle1:")
-		}
-	})
-	userGroup.PostHandleMiddleware(func(next lorago.HandleFunc) lorago.HandleFunc {
-		return func(ctx *lorago.Context) {
-			fmt.Fprintln(ctx.W, "Post Handle2:")
+			fmt.Fprintln(ctx.W, "Post Handle3:")
+			fmt.Fprintln(ctx.W, "Post Handle4:")
 		}
 	})
 	userGroup.Post("/name", func(context *lorago.Context) {
