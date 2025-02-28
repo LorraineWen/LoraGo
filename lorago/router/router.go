@@ -136,22 +136,30 @@ func (r *routerGroup) MiddlewareHandleFunc(ctx *Context, name, method string, ha
 // 这里是直接嵌入了类型，所以Engine继承了router的方法和成员
 type Engine struct {
 	*router
-	funcMap    template.FuncMap  //设置html模板渲染时所需要的函数
-	htmlRender render.HTMLRender //在内存中存放html模板
+	funcMap    template.FuncMap          //设置html模板渲染时所需要的函数
+	htmlRender render.HtmlTemplateRender //在内存中存放html模板
 }
 
 func New() *Engine {
 	return &Engine{router: &router{}}
 }
+
+// 以下三个函数都是在渲染html模板时，需要调用的函数
+// 设置html需要的一些函数
 func (e *Engine) SetFuncMap(funcMap template.FuncMap) {
 	e.funcMap = funcMap
 }
+
+// 将html模板加载到内存中
+// engine.LoadTemplate("../test/template/*.html")
 func (e *Engine) LoadTemplate(pattern string) {
 	t := template.Must(template.New("").Funcs(e.funcMap).ParseGlob(pattern))
 	e.setHtmlTemplate(t)
 }
+
+// 设置html模板
 func (e *Engine) setHtmlTemplate(t *template.Template) {
-	e.htmlRender = render.HTMLRender{Template: t}
+	e.htmlRender = render.HtmlTemplateRender{Template: t}
 }
 func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	method := r.Method

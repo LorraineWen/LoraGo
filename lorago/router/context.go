@@ -1,9 +1,8 @@
 package router
 
 import (
-	"encoding/json"
-	"encoding/xml"
 	"fmt"
+	"github.com/LorraineWen/lorago/router/render"
 	"github.com/LorraineWen/lorago/util"
 	"html/template"
 	"net/http"
@@ -24,63 +23,48 @@ type Context struct {
 	e *Engine //用于获取模板渲染函数
 }
 
+func (c *Context) Render(code int, r render.Render) error {
+	err := r.Render(c.W)
+	c.W.WriteHeader(code)
+	return err
+}
+
 // 支持html格式响应
-func (ctx *Context) Html(status int, html string) error {
-	ctx.W.WriteHeader(status)
-	ctx.W.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, err := ctx.W.Write([]byte(html))
-	if err != nil {
-		return err
-	}
-	return nil
+func (ctx *Context) Html(status int, data any) error {
+	err := ctx.Render(status, &render.HtmlRender{IsTemplate: false, Data: data})
+	return err
 }
 
 // 支持json格式响应
 func (ctx *Context) Json(status int, data any) error {
-	ctx.W.WriteHeader(status)
-	ctx.W.Header().Set("Content-Type", "application/json; charset=utf-8")
-	dataJson, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-	_, err = ctx.W.Write(dataJson)
-	if err != nil {
-		return err
-	}
-	return nil
+	err := ctx.Render(status, &render.JsonRender{Data: data})
+	return err
 }
 
 // 支持xml格式响应
 func (ctx *Context) Xml(status int, data any) error {
-	ctx.W.WriteHeader(status)
-	ctx.W.Header().Set("Content-Type", "application/xml; charset=utf-8")
-	dataXml, err := xml.Marshal(data)
-	if err != nil {
-		return err
-	}
-	_, err = ctx.W.Write(dataXml)
-	if err != nil {
-		return err
-	}
-	return nil
+	err := ctx.Render(status, &render.XmlRender{Data: data})
+	return err
 }
 
 // 支持格式化String格式响应
-func (ctx *Context) String(status int, format string, data ...any) error {
-	ctx.W.WriteHeader(status)
-	ctx.W.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	if len(data) > 0 {
-		_, err := fmt.Fprintf(ctx.W, format, data...)
-		if err != nil {
-			return err
-		}
-		return nil
-	}
-	_, err := ctx.W.Write(util.StringToByte(format))
-	if err != nil {
-		return err
-	}
-	return nil
+func (ctx *Context) String(status int, format string, data ...any) (err error) {
+	err = ctx.Render(status, &render.StringRender{
+		Format: format,
+		Data:   data,
+	})
+	return
+}
+
+// 支持提前将模板加载到内存中
+func (ctx *Context) Template(status int, name string, data any) error {
+	err := ctx.Render(status, &render.HtmlRender{
+		IsTemplate: true,
+		Name:       name,
+		Data:       data,
+		Template:   ctx.e.htmlRender.Template,
+	})
+	return err
 }
 
 // 支持HTML模板，动态渲染HTML，对ParseFiles函数的封装
@@ -109,16 +93,6 @@ func (ctx *Context) HtmlTemplateGlob(name string, funcMap template.FuncMap, patt
 	}
 	ctx.W.Header().Set("Content-Type", "text/html; charset=utf-8")
 	err = t.Execute(ctx.W, data)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// 支持提前将模板加载到内存中
-func (ctx *Context) Template(name string, data any) error {
-	ctx.W.Header().Set("Content-Type", "text/html; charset=utf-8")
-	err := ctx.e.htmlRender.Template.ExecuteTemplate(ctx.W, name, data)
 	if err != nil {
 		return err
 	}

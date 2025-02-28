@@ -26,11 +26,9 @@ func main() {
 	fmt.Println(os.Getwd())
 	userGroup := engine.Group("user")
 	//直接传入模板名称和数据就可以了
+	engine.LoadTemplate("../test/template/*.html")
 	userGroup.Get("/index", func(context *lorago.Context) {
-		context.String(http.StatusOK, "Hello World %s")
-	})
-	userGroup.Get("/login", func(context *lorago.Context) {
-		context.Redirect(307, "/user/index")
+		context.Template(http.StatusOK, "index.html", &User{Name: "amie"})
 	})
 	engine.Run()
 }
