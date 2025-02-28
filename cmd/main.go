@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	lorago "github.com/LorraineWen/lorago/router"
+	"net/http"
 	"os"
 )
 
@@ -24,17 +25,12 @@ func main() {
 	engine := lorago.New()
 	fmt.Println(os.Getwd())
 	userGroup := engine.Group("user")
-	//提前将模板加载到内存中
-	engine.LoadTemplate("../test/template/*.html")
 	//直接传入模板名称和数据就可以了
 	userGroup.Get("/index", func(context *lorago.Context) {
-		user := &User{
-			Name: "amie",
-		}
-		err := context.Template("login.html", user)
-		if err != nil {
-			fmt.Fprintln(context.W, err)
-		}
+		context.String(http.StatusOK, "Hello World %s")
+	})
+	userGroup.Get("/login", func(context *lorago.Context) {
+		context.Redirect(307, "/user/index")
 	})
 	engine.Run()
 }

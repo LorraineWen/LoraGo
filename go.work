@@ -1,6 +1,6 @@
 go 1.22.10
 
 use (
-	./blog_system
+	./cmd
 	./lorago
 )

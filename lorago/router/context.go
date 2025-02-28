@@ -1,15 +1,22 @@
 package router
 
 import (
+	"encoding/json"
+	"encoding/xml"
+	"fmt"
+	"github.com/LorraineWen/lorago/util"
 	"html/template"
 	"net/http"
+	"net/url"
 )
 
 /*
 *@Author: LorraineWen
 *@Date: 2025/2/26
 *该文件主要提供上下文有关的接口
-*由于http.ResponseWriter存放于Context中，所以Context应该提供接口进行模板渲染
+*由于http.ResponseWriter存放于Context中，所以Context应该提供接口进行html模板渲染
+*还需要支持json，xml等格式的返回
+*支持下载文件的需求，可以自定义下载的文件的名称
  */
 type Context struct {
 	W http.ResponseWriter
@@ -17,11 +24,59 @@ type Context struct {
 	e *Engine //用于获取模板渲染函数
 }
 
-// 渲染HTML需要明确content-type和charset
+// 支持html格式响应
 func (ctx *Context) Html(status int, html string) error {
 	ctx.W.WriteHeader(status)
 	ctx.W.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, err := ctx.W.Write([]byte(html))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// 支持json格式响应
+func (ctx *Context) Json(status int, data any) error {
+	ctx.W.WriteHeader(status)
+	ctx.W.Header().Set("Content-Type", "application/json; charset=utf-8")
+	dataJson, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	_, err = ctx.W.Write(dataJson)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// 支持xml格式响应
+func (ctx *Context) Xml(status int, data any) error {
+	ctx.W.WriteHeader(status)
+	ctx.W.Header().Set("Content-Type", "application/xml; charset=utf-8")
+	dataXml, err := xml.Marshal(data)
+	if err != nil {
+		return err
+	}
+	_, err = ctx.W.Write(dataXml)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// 支持格式化String格式响应
+func (ctx *Context) String(status int, format string, data ...any) error {
+	ctx.W.WriteHeader(status)
+	ctx.W.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	if len(data) > 0 {
+		_, err := fmt.Fprintf(ctx.W, format, data...)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	_, err := ctx.W.Write(util.StringToByte(format))
 	if err != nil {
 		return err
 	}
@@ -61,11 +116,47 @@ func (ctx *Context) HtmlTemplateGlob(name string, funcMap template.FuncMap, patt
 }
 
 // 支持提前将模板加载到内存中
-func (c *Context) Template(name string, data any) error {
-	c.W.Header().Set("Content-Type", "text/html; charset=utf-8")
-	err := c.e.htmlRender.Template.ExecuteTemplate(c.W, name, data)
+func (ctx *Context) Template(name string, data any) error {
+	ctx.W.Header().Set("Content-Type", "text/html; charset=utf-8")
+	err := ctx.e.htmlRender.Template.ExecuteTemplate(ctx.W, name, data)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+// 支持文件下载
+func (ctx *Context) File(filePath string) {
+	http.ServeFile(ctx.W, ctx.R, filePath)
+}
+
+// 支持自定义文件名称下载，下载好的文件名称自动变为filename
+func (c *Context) FileAttachment(filepath, filename string) {
+	if util.IsASCII(filename) {
+		c.W.Header().Set("Content-Disposition", `attachment; filename="`+filename+`"`)
+	} else {
+		c.W.Header().Set("Content-Disposition", `attachment; filename*=UTF-8''`+url.QueryEscape(filename))
+	}
+	http.ServeFile(c.W, c.R, filepath)
+}
+
+// 从本地文件系统下载文件，fileSystem实际上就是一个本地的目录http.Dir("../test/template")
+// filePath就是以template作为根目录了
+func (c *Context) FileFromFileSystem(filePath string, fileSystem http.FileSystem) {
+	defer func(old string) {
+		c.R.URL.Path = old
+	}(c.R.URL.Path)
+
+	c.R.URL.Path = filePath
+
+	http.FileServer(fileSystem).ServeHTTP(c.W, c.R)
+}
+
+// 路由重定向支持
+func (c *Context) Redirect(status int, location string) {
+	//由于http.Redirect的重定向只对部分状态码有效果，因此需要对状态码进行判断
+	if (status < http.StatusMultipleChoices || status > http.StatusPermanentRedirect) && status != http.StatusCreated {
+		panic(fmt.Sprintf("在该状态下无法进行重定向 %d", status))
+	}
+	http.Redirect(c.W, c.R, location, status)
 }
