@@ -28,7 +28,7 @@ func main() {
 	//直接传入模板名称和数据就可以了
 	engine.LoadTemplate("../test/template/*.html")
 	userGroup.Get("/index", func(context *lorago.Context) {
-		context.Template(http.StatusOK, "index.html", &User{Name: "amie"})
+		context.TemplateResponseWrite(http.StatusOK, "index.html", &User{Name: "amie"})
 	})
 	engine.Run()
 }

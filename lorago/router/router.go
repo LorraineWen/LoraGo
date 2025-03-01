@@ -28,12 +28,16 @@ const (
 	HEAD    = http.MethodHead
 )
 
+// 定义路由回调函数类型
 type HandleFunc func(ctx *Context)
 
+// 定义路由类型，该路由是按照路由组进行注册的，所以只支持路由组方式注册路由
 type router struct {
 	routerGroups []*routerGroup
 }
 
+// 获取路由组对象
+// 调用方式:userGroup:=Group("user")
 func (r *router) Group(name string) *routerGroup {
 	g := &routerGroup{
 		groupName:          name,
@@ -47,7 +51,10 @@ func (r *router) Group(name string) *routerGroup {
 	return g
 }
 
+// 定义中间件回调函数类型
 type MiddlewareFunc func(handleFunc HandleFunc) HandleFunc
+
+// 定义路由组对象类型
 type routerGroup struct {
 	groupName  string
 	handlerMap map[string]map[string]HandleFunc //路由对应的方法对应的处理函数
@@ -59,6 +66,7 @@ type routerGroup struct {
 	trieNode           *trieNode
 }
 
+// Get，Post等函数的内部实现函数
 func (r *routerGroup) MethodHandle(name string, method string, handleFunc HandleFunc, middlewareFunc ...MiddlewareFunc) {
 	if _, ok := r.handlerMap[name]; !ok {
 		r.handlerMap[name] = make(map[string]HandleFunc)
@@ -145,11 +153,13 @@ type Engine struct {
 func New() *Engine {
 	engine := &Engine{router: &router{}, funcMap: nil, htmlRender: render.HtmlTemplateRender{}}
 	engine.pool.New = func() any {
-		//由于context对象会存在许多的属性，所以单独抽取出一个函数来进行context的初始化
+
 		return engine.allocateContext()
 	}
 	return engine
 }
+
+// 由于context对象会存在许多的属性，所以单独抽取出一个函数来进行context的初始化
 func (e *Engine) allocateContext() any {
 	return &Context{e: e}
 }
@@ -161,16 +171,13 @@ func (e *Engine) SetFuncMap(funcMap template.FuncMap) {
 }
 
 // 将html模板加载到内存中
-// engine.LoadTemplate("../test/template/*.html")
+// 调用方式:engine.LoadTemplate("../test/template/*.html")
 func (e *Engine) LoadTemplate(pattern string) {
 	t := template.Must(template.New("").Funcs(e.funcMap).ParseGlob(pattern))
-	e.setHtmlTemplate(t)
-}
-
-// 设置html模板
-func (e *Engine) setHtmlTemplate(t *template.Template) {
 	e.htmlRender = render.HtmlTemplateRender{Template: t}
 }
+
+// Engine需要实现ServeHTTP函数，才能实现Hanler接口，Engine才能成为一个自定义的路由处理器
 func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	method := r.Method
 	ctx := e.pool.Get().(*Context)
@@ -178,7 +185,7 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx.R = r
 	for _, group := range e.routerGroups {
 		//判断请求中的URL里面是否包含分组路径
-		routerName := util.SubStringLast(r.RequestURI, "/"+group.groupName) //如果url中包含分组路径，那么就返回url中分组路径后面的请求路径，/user/getname，返回/getname
+		routerName := util.SubStringLast(r.URL.Path, "/"+group.groupName) //如果url中包含分组路径，那么就返回url中分组路径后面的请求路径，/user/getname，返回/getname
 		node := group.trieNode.get(routerName)
 		//对于/user/getname/1,routerName=/getname/1
 		//node.routerName=/get/name/:id，这也是我们实际注册的路由，所应该应该使用node.routerName来索引得到处理routerName的函数
@@ -204,8 +211,8 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	return
 }
 func (e *Engine) Run() {
-	http.Handle("/", e)
-	err := http.ListenAndServe(":8080", nil)
+	//e是一个自定义的路由处理器
+	err := http.ListenAndServe(":8080", e)
 	if err != nil {
 		panic(err)
 	}
