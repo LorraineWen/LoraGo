@@ -6,6 +6,7 @@ import (
 	"github.com/LorraineWen/lorago/util"
 	"html/template"
 	"net/http"
+	"sync"
 )
 
 /*
@@ -138,10 +139,19 @@ type Engine struct {
 	*router
 	funcMap    template.FuncMap          //设置html模板渲染时所需要的函数
 	htmlRender render.HtmlTemplateRender //在内存中存放html模板
+	pool       sync.Pool                 //存放context对象，避免context对象的多次重复创建，导致多次重复释放内存和分配内存
 }
 
 func New() *Engine {
-	return &Engine{router: &router{}}
+	engine := &Engine{router: &router{}, funcMap: nil, htmlRender: render.HtmlTemplateRender{}}
+	engine.pool.New = func() any {
+		//由于context对象会存在许多的属性，所以单独抽取出一个函数来进行context的初始化
+		return engine.allocateContext()
+	}
+	return engine
+}
+func (e *Engine) allocateContext() any {
+	return &Context{e: e}
 }
 
 // 以下三个函数都是在渲染html模板时，需要调用的函数
@@ -163,6 +173,9 @@ func (e *Engine) setHtmlTemplate(t *template.Template) {
 }
 func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	method := r.Method
+	ctx := e.pool.Get().(*Context)
+	ctx.W = w
+	ctx.R = r
 	for _, group := range e.routerGroups {
 		//判断请求中的URL里面是否包含分组路径
 		routerName := util.SubStringLast(r.RequestURI, "/"+group.groupName) //如果url中包含分组路径，那么就返回url中分组路径后面的请求路径，/user/getname，返回/getname
@@ -170,7 +183,6 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		//对于/user/getname/1,routerName=/getname/1
 		//node.routerName=/get/name/:id，这也是我们实际注册的路由，所应该应该使用node.routerName来索引得到处理routerName的函数
 		if node != nil && node.isEnd {
-			ctx := &Context{R: r, W: w, e: e}
 			handle, ok := group.handlerMap[node.routerName][ANY]
 			if ok {
 				group.MiddlewareHandleFunc(ctx, node.routerName, method, handle)
