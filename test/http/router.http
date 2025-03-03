@@ -1,5 +1,5 @@
 ### GET test get router
-GET http://localhost:8080/user/index
+GET http://localhost:8080/user/index?id=1
 
 ### GET test get router
 GET http://localhost:8080/user/login
@@ -11,4 +11,44 @@ DELETE http://localhost:8080/user/name
 PUT http://localhost:8080/user/name
 
 ### POST test post router
-POST http://localhost:8080/user/name
+POST http://localhost:8080/user/index1
+Content-Type: application/x-www-form-urlencoded
+
+
+### POST test post router
+POST http://localhost:8080/user/index2
+Content-Type: application/x-www-form-urlencoded
+
+id=1&id=2
+
+### POST test post GetFormArrayQuery
+POST http://localhost:8080/user/index3
+Content-Type: application/x-www-form-urlencoded
+
+user[id]=1&user[id]=2&user[name]="amie"
+
+### POST test post BindJson
+POST http://localhost:8080/user/index2
+Content-Type: application/json
+
+{
+  "name": "amie",
+  "age": 1,
+  "password": "2145"
+}
+### POST test BindJson
+POST http://localhost:8080/user/index2
+Content-Type: application/json
+
+[
+  {
+    "name": "amie1",
+    "age": 1,
+    "password": "2145"
+  },
+  {
+    "name": "amie2",
+    "age": 1,
+    "password": "2145"
+  }
+]

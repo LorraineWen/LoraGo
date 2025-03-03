@@ -8,7 +8,13 @@ import (
 )
 
 type User struct {
-	Name string
+	Name     string `json:"name" binding:"required"`
+	Age      int    `json:"age"`
+	Password string `json:"password"`
+}
+type RespError struct {
+	Code  int    `json:"code"`
+	Error string `json:"error"`
 }
 
 func m1(next lorago.HandleFunc) lorago.HandleFunc {
@@ -27,8 +33,21 @@ func main() {
 	userGroup := engine.Group("user")
 	//直接传入模板名称和数据就可以了
 	engine.LoadTemplate("../test/template/*.html")
-	userGroup.Get("/index", func(context *lorago.Context) {
-		context.TemplateResponseWrite(http.StatusOK, "index.html", &User{Name: "amie"})
+	userGroup.Post("/index2", func(context *lorago.Context) {
+		user := []User{}
+		context.Validate = true
+		context.DisallowUnknownFields = true
+		err := context.BindJson(&user)
+		if err != nil {
+			context.JsonResponseWrite(http.StatusInternalServerError, &RespError{Code: http.StatusInternalServerError, Error: err.Error()})
+			return
+		}
+		context.JsonResponseWrite(http.StatusOK, user)
+	})
+	userGroup.Post("/index1", func(context *lorago.Context) {
+		res := context.DefaultFormQuery("id", "1")
+		fmt.Println(res)
+		context.JsonResponseWrite(http.StatusOK, res)
 	})
 	engine.Run()
 }
