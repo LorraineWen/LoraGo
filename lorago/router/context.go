@@ -28,7 +28,8 @@ const defaultMultipartMemory = 30 << 20 //30MB大小用来加载post表单里面
 type Context struct {
 	W                     http.ResponseWriter
 	R                     *http.Request
-	e                     *Engine    //用于获取模板渲染函数
+	engine                *Engine    //用于获取模板渲染函数
+	StatusCode            int        //存放响应结果
 	queryCache            url.Values //用于获取请求路径中的参数，实际上就是map[string[]string
 	formCache             url.Values //用于获取post请求中的表单数据
 	DisallowUnknownFields bool       //设置参数属性检查，json参数中有的属性，如果绑定的结构体没有就报错
@@ -77,7 +78,7 @@ func (ctx *Context) StringResponseWrite(status int, format string, data ...any) 
 	return
 }
 
-// 配合e.LoadTemplate函数使用，e.LoadTemplate初始化 ctx.e.htmlRender.Template，Template只需要传递该模板需要的数据
+// 配合e.LoadTemplate函数使用，engine.LoadTemplate初始化 ctx.engine.htmlRender.Template，Template只需要传递该模板需要的数据
 // 调用方式:
 // engine.LoadTemplate("../test/template/*.html")
 //
@@ -91,7 +92,7 @@ func (ctx *Context) TemplateResponseWrite(status int, name string, data any) err
 		IsTemplate: true,
 		Name:       name,
 		Data:       data,
-		Template:   ctx.e.htmlRender.Template,
+		Template:   ctx.engine.htmlRender.Template,
 	})
 	return err
 }

@@ -161,7 +161,7 @@ func New() *Engine {
 
 // 由于context对象会存在许多的属性，所以单独抽取出一个函数来进行context的初始化
 func (e *Engine) allocateContext() any {
-	return &Context{e: e}
+	return &Context{engine: e}
 }
 
 // 以下三个函数都是在渲染html模板时，需要调用的函数
