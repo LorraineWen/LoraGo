@@ -38,14 +38,14 @@ const (
 )
 
 type LoggerConfig struct {
-	Formatter LoggerFormatter //支持格式化输出
+	Formatter LogMiddlewareFormatter //支持格式化输出
 	out       io.Writer
 }
 
 // 支持日志格式化输出
 var DefaultWriter io.Writer = os.Stdout
 
-type LoggerFormatter func(params LogFormatterParams) string
+type LogMiddlewareFormatter func(params LogFormatterParams) string
 type LogFormatterParams struct {
 	Request    *http.Request
 	TimeStamp  time.Time

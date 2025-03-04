@@ -3,8 +3,7 @@ package main
 import (
 	"fmt"
 	lorago "github.com/LorraineWen/lorago/router"
-	log2 "github.com/LorraineWen/lorago/router/log"
-	"log"
+	log "github.com/LorraineWen/lorago/router/log"
 	"net/http"
 	"os"
 )
@@ -22,9 +21,7 @@ func main() {
 	engine := lorago.New()
 	fmt.Println(os.Getwd())
 	userGroup := engine.Group("user")
-	userGroup.Use(log2.LogMiddleware)
-	//直接传入模板名称和数据就可以了
-	engine.LoadTemplate("../test/template/*.html")
+	userGroup.Use(log.LogMiddleware)
 	userGroup.Post("/index2", func(context *lorago.Context) {
 		user := []User{}
 		context.ValidateAnother = true
@@ -37,13 +34,18 @@ func main() {
 		}
 		context.JsonResponseWrite(http.StatusOK, user)
 	})
+	logger := log.NewLogger()
+	logger.Level = log.LevelDebug
 	userGroup.Post("/index1", func(ctx *lorago.Context) {
 		user := &User{}
 		err := ctx.BindXml(user)
+		logger.Debug("debug")
+		logger.Info("info")
+		logger.Error("error")
 		if err == nil {
 			ctx.JsonResponseWrite(http.StatusOK, user)
 		} else {
-			log.Println(err)
+			fmt.Println(err)
 		}
 	})
 	engine.Run()
