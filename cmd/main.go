@@ -3,14 +3,14 @@ package main
 import (
 	"fmt"
 	lorago "github.com/LorraineWen/lorago/router"
+	"log"
 	"net/http"
 	"os"
 )
 
 type User struct {
-	Name     string `json:"name" binding:"required"`
-	Age      int    `json:"age"`
-	Password string `json:"password"`
+	Name string `json:"name" validate:"required" binding:"required" xml:"name"`
+	Age  int    `json:"age" validate:"required,max=50,min=18" xml:"age"`
 }
 type RespError struct {
 	Code  int    `json:"code"`
@@ -35,8 +35,9 @@ func main() {
 	engine.LoadTemplate("../test/template/*.html")
 	userGroup.Post("/index2", func(context *lorago.Context) {
 		user := []User{}
-		context.Validate = true
+		context.ValidateAnother = true
 		context.DisallowUnknownFields = true
+		context.Validate = true
 		err := context.BindJson(&user)
 		if err != nil {
 			context.JsonResponseWrite(http.StatusInternalServerError, &RespError{Code: http.StatusInternalServerError, Error: err.Error()})
@@ -44,10 +45,14 @@ func main() {
 		}
 		context.JsonResponseWrite(http.StatusOK, user)
 	})
-	userGroup.Post("/index1", func(context *lorago.Context) {
-		res := context.DefaultFormQuery("id", "1")
-		fmt.Println(res)
-		context.JsonResponseWrite(http.StatusOK, res)
+	userGroup.Post("/index1", func(ctx *lorago.Context) {
+		user := &User{}
+		err := ctx.BindXml(user)
+		if err == nil {
+			ctx.JsonResponseWrite(http.StatusOK, user)
+		} else {
+			log.Println(err)
+		}
 	})
 	engine.Run()
 }

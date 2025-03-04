@@ -42,13 +42,22 @@ Content-Type: application/json
 
 [
   {
-    "name": "amie1",
-    "age": 1,
+    "name": "amie3",
+    "age": 20,
     "password": "2145"
   },
   {
     "name": "amie2",
-    "age": 1,
+    "age": 20,
     "password": "2145"
   }
 ]
+
+### POST test BindXml
+POST http://localhost:8080/user/index1
+Content-Type: application/xml
+
+<User>
+    <name>张三</name>
+    <age>20</age>
+</User>

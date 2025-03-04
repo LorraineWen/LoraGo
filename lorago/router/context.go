@@ -1,10 +1,10 @@
 package router
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/LorraineWen/lorago/router/render"
+	"github.com/LorraineWen/lorago/router/validate"
 	"github.com/LorraineWen/lorago/util"
 	"io"
 	"log"
@@ -12,13 +12,11 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"reflect"
 	"strings"
 )
 
 /*
 *@Author: LorraineWen
-*@Date: 2025/2/26
 *该文件主要提供上下文有关的接口
 *由于http.ResponseWriter存放于Context中，所以Context应该提供接口进行html模板渲染
 *还需要支持json，xml等格式的返回
@@ -35,6 +33,7 @@ type Context struct {
 	formCache             url.Values //用于获取post请求中的表单数据
 	DisallowUnknownFields bool       //设置参数属性检查，json参数中有的属性，如果绑定的结构体没有就报错
 	Validate              bool       //设置结构体属性检查，如果json参数中没有该结构体的相应属性，那么就会报错
+	ValidateAnother       bool       //启用第三方的校验
 }
 
 // 一个多态函数，htmlRender等结构体实现了Render函数，因此可以传入htmlRender等接口体，调用它们自己的Render函数，编码html等响应格式
@@ -292,88 +291,24 @@ func (ctx *Context) SaveUploadedFile(file *multipart.FileHeader, dst string) err
 // 解析post请求中的json格式数据
 // 如果要解析属性校验，需要在注册路由的时候，将Validate两个bool值设置为true
 func (ctx *Context) BindJson(data any) error {
-	body := ctx.R.Body
-	if ctx.R == nil || body == nil {
-		return errors.New("请求错误")
-	}
-	decoder := json.NewDecoder(body)
-	//如果启用了请求参数属性检测，那么就会检查请求参数中的属性，在相应结构体中是否存在
-	if ctx.DisallowUnknownFields {
-		decoder.DisallowUnknownFields()
-	}
-	//如果启用了请求参数属性检测，那么就会检查结构体中的属性，在相应请求参数中是否存在
-	if ctx.Validate {
-		if data == nil {
-			return nil
-		}
-		valueOf := reflect.ValueOf(data)
-		//判断传入进来的是否是结构体指针，因为只有指针才传值
-		if valueOf.Kind() != reflect.Pointer {
-			return errors.New("bind data must be a pointer")
-		}
-		t := valueOf.Elem().Interface()
-		of := reflect.ValueOf(t)
-		switch of.Kind() {
-		//结构体类型的反射
-		case reflect.Struct:
-			return validateStructParams(of, data, decoder)
-		//切片类型的反射
-		case reflect.Slice, reflect.Array:
-			elem := of.Type().Elem()
-			elemType := elem.Kind()
-			if elemType == reflect.Struct {
-				return validateSliceParams(elem, data, decoder)
-			}
-		default:
-			err := decoder.Decode(data)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return decoder.Decode(data)
+	jsonBinder := validate.JsonBinder
+	jsonBinder.DisallowUnknownFields = ctx.DisallowUnknownFields
+	jsonBinder.IsValidate = ctx.Validate
+	jsonBinder.IsValidateAnother = ctx.ValidateAnother
+	return ctx.MustBindWith(data, jsonBinder) //多态底层调用json格式校验
 }
-func validateSliceParams(elem reflect.Type, data any, decoder *json.Decoder) error {
-	mapData := make([]map[string]interface{}, 0)
-	_ = decoder.Decode(&mapData)
-	if len(mapData) <= 0 {
-		return nil
-	}
-	for i := 0; i < elem.NumField(); i++ {
-		field := elem.Field(i)
-		tag := field.Tag.Get("json")
-		value := mapData[0][tag]
-		if value == nil && field.Tag.Get("binding") == "required" {
-			return errors.New(fmt.Sprintf("filed [%s] is required", tag))
-		}
-	}
-	if data != nil {
-		marshal, _ := json.Marshal(mapData)
-		err := json.Unmarshal(marshal, data)
-		if err != nil {
-			return err
-		}
+
+// 支持xml格式校验
+func (ctx *Context) BindXml(obj any) error {
+	return ctx.MustBindWith(obj, validate.XmlBinder)
+}
+func (ctx *Context) MustBindWith(obj any, b validate.Binder) error {
+	//如果发生错误，返回400状态码 参数错误
+	if err := ctx.ShouldBindWith(obj, b); err != nil {
+		return err
 	}
 	return nil
 }
-func validateStructParams(of reflect.Value, data any, decoder *json.Decoder) error {
-	mapData := make(map[string]interface{})
-	err := decoder.Decode(&mapData)
-	if err != nil {
-		return err
-	}
-	for i := 0; i < of.NumField(); i++ {
-		field := of.Type().Field(i)
-		tag := field.Tag.Get("json") //获取结构体标签对应的值
-		value := mapData[tag]
-		if value == nil && field.Tag.Get("binding") == "required" { //如果该属性在请求中没有，并且是必须属性就报错
-			return errors.New(fmt.Sprintf("filed [%s] is not exist", tag))
-		}
-	}
-	marshal, err := json.Marshal(mapData)
-	if err != nil {
-		return err
-	}
-	err = json.Unmarshal(marshal, data)
-	return err
+func (ctx *Context) ShouldBindWith(obj any, b validate.Binder) error {
+	return b.Bind(ctx.R, obj)
 }
