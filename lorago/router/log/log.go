@@ -21,7 +21,26 @@ import (
 *支持将日志输出到文件中
 *支持日志文件的拆分，当一个日志文件过大的时候，拆分为两个文件
  */
-//定义日志级别
+//定义颜色
+const (
+	greenBg   = "\033[97;42m"
+	whiteBg   = "\033[90;47m"
+	yellowBg  = "\033[90;43m"
+	redBg     = "\033[97;41m"
+	blueBg    = "\033[97;44m"
+	magentaBg = "\033[97;45m"
+	cyanBg    = "\033[97;46m"
+	green     = "\033[32m"
+	white     = "\033[37m"
+	yellow    = "\033[33m"
+	red       = "\033[31m"
+	blue      = "\033[34m"
+	magenta   = "\033[35m"
+	cyan      = "\033[36m"
+	reset     = "\033[0m"
+)
+
+// 定义日志级别
 const (
 	LevelDebug LoggerLevel = iota
 	LevelInfo

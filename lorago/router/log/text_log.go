@@ -9,7 +9,7 @@ import (
 type TextFormatter struct {
 }
 
-func (f *TextFormatter) Format(param *LoggingFormatParam) string {
+func (f TextFormatter) Format(param *LoggingFormatParam) string {
 	now := time.Now()
 	fieldsString := ""
 	if param.LoggerFields != nil {

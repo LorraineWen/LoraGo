@@ -42,7 +42,6 @@ Content-Type: application/json
 
 [
   {
-    "name": "amie3",
     "age": 20,
     "password": "2145"
   },

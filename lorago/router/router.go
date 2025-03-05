@@ -2,6 +2,7 @@ package router
 
 import (
 	"fmt"
+	"github.com/LorraineWen/lorago/router/log"
 	"github.com/LorraineWen/lorago/router/render"
 	"github.com/LorraineWen/lorago/util"
 	"html/template"
@@ -34,12 +35,13 @@ type HandleFunc func(ctx *Context)
 // 定义路由类型，该路由是按照路由组进行注册的，所以只支持路由组方式注册路由
 type router struct {
 	routerGroups []*routerGroup
+	engine       *Engine //通过处理器为每个路由组设置中间件
 }
 
 // 获取路由组对象
 // 调用方式:userGroup:=Group("user")
 func (r *router) Group(name string) *routerGroup {
-	g := &routerGroup{
+	routerGroup := &routerGroup{
 		groupName:          name,
 		handlerMap:         make(map[string]map[string]HandleFunc),
 		middlewaresFuncMap: make(map[string]map[string][]MiddlewareFunc),
@@ -47,8 +49,9 @@ func (r *router) Group(name string) *routerGroup {
 			name:     "/",
 			children: make([]*trieNode, 0)},
 	}
-	r.routerGroups = append(r.routerGroups, g)
-	return g
+	routerGroup.Use(r.engine.MiddlewareFuncs...)
+	r.routerGroups = append(r.routerGroups, routerGroup)
+	return routerGroup
 }
 
 // 定义中间件回调函数类型
@@ -145,18 +148,25 @@ func (r *routerGroup) MiddlewareHandleFunc(ctx *Context, name, method string, ha
 // 这里是直接嵌入了类型，所以Engine继承了router的方法和成员
 type Engine struct {
 	*router
-	funcMap    template.FuncMap          //设置html模板渲染时所需要的函数
-	htmlRender render.HtmlTemplateRender //在内存中存放html模板
-	pool       sync.Pool                 //存放context对象，避免context对象的多次重复创建，导致多次重复释放内存和分配内存
+	funcMap         template.FuncMap          //设置html模板渲染时所需要的函数
+	htmlRender      render.HtmlTemplateRender //在内存中存放html模板
+	pool            sync.Pool                 //存放context对象，避免context对象的多次重复创建，导致多次重复释放内存和分配内存
+	Logger          *log.Logger               //初始化context里面的日志对象
+	MiddlewareFuncs []MiddlewareFunc          //初始化的处理器的时候就需要注册的中间件
 }
 
 func New() *Engine {
-	engine := &Engine{router: &router{}, funcMap: nil, htmlRender: render.HtmlTemplateRender{}}
+	engine := &Engine{router: &router{}, funcMap: nil, htmlRender: render.HtmlTemplateRender{}, Logger: log.NewLogger()}
 	engine.pool.New = func() any {
 
 		return engine.allocateContext()
 	}
+	engine.Use(RecoveryMiddleware, LogMiddleware) //自动使用日志和panic捕获的中间件
+	engine.router.engine = engine
 	return engine
+}
+func (e *Engine) Use(middlewareFunc ...MiddlewareFunc) {
+	e.MiddlewareFuncs = append(e.MiddlewareFuncs, middlewareFunc...)
 }
 
 // 由于context对象会存在许多的属性，所以单独抽取出一个函数来进行context的初始化
@@ -183,6 +193,7 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := e.pool.Get().(*Context)
 	ctx.W = w
 	ctx.R = r
+	ctx.Logger = e.Logger
 	for _, group := range e.routerGroups {
 		//判断请求中的URL里面是否包含分组路径
 		routerName := util.SubStringLast(r.URL.Path, "/"+group.groupName) //如果url中包含分组路径，那么就返回url中分组路径后面的请求路径，/user/getname，返回/getname

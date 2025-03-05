@@ -10,7 +10,7 @@ type JsonFormatter struct {
 	TimeDisplay bool
 }
 
-func (f *JsonFormatter) Format(param *LoggingFormatParam) string {
+func (f JsonFormatter) Format(param *LoggingFormatParam) string {
 	if param.LoggerFields == nil {
 		param.LoggerFields = make(Fields)
 	}

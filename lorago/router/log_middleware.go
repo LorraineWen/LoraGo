@@ -1,8 +1,7 @@
-package log
+package router
 
 import (
 	"fmt"
-	"github.com/LorraineWen/lorago/router"
 	"io"
 	"net"
 	"net/http"
@@ -99,7 +98,7 @@ var defaultLogFormatter = func(params LogFormatterParams) string {
 
 // 日志中间件
 // 调用方式routerGroup.Use(lorago.LogMiddleware)
-func LoggerWithConfig(conf LoggerConfig, next router.HandleFunc) router.HandleFunc {
+func LoggerWithConfig(conf LoggerConfig, next HandleFunc) HandleFunc {
 	formatter := conf.Formatter
 	if formatter == nil {
 		formatter = defaultLogFormatter
@@ -111,7 +110,7 @@ func LoggerWithConfig(conf LoggerConfig, next router.HandleFunc) router.HandleFu
 		out = DefaultWriter
 		isColor = true
 	}
-	return func(ctx *router.Context) {
+	return func(ctx *Context) {
 		param := LogFormatterParams{
 			Request: ctx.R,
 		}
@@ -143,6 +142,6 @@ func LoggerWithConfig(conf LoggerConfig, next router.HandleFunc) router.HandleFu
 		fmt.Fprint(out, formatter(param))
 	}
 }
-func LogMiddleware(next router.HandleFunc) router.HandleFunc {
+func LogMiddleware(next HandleFunc) HandleFunc {
 	return LoggerWithConfig(LoggerConfig{}, next)
 }

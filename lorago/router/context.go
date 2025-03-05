@@ -3,11 +3,11 @@ package router
 import (
 	"errors"
 	"fmt"
+	"github.com/LorraineWen/lorago/router/log"
 	"github.com/LorraineWen/lorago/router/render"
 	"github.com/LorraineWen/lorago/router/validate"
 	"github.com/LorraineWen/lorago/util"
 	"io"
-	"log"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -35,6 +35,7 @@ type Context struct {
 	DisallowUnknownFields bool       //设置参数属性检查，json参数中有的属性，如果绑定的结构体没有就报错
 	Validate              bool       //设置结构体属性检查，如果json参数中没有该结构体的相应属性，那么就会报错
 	ValidateAnother       bool       //启用第三方的校验
+	Logger                *log.Logger
 }
 
 // 一个多态函数，htmlRender等结构体实现了Render函数，因此可以传入htmlRender等接口体，调用它们自己的Render函数，编码html等响应格式
@@ -194,7 +195,7 @@ func (ctx *Context) initFormCache() {
 		req := ctx.R
 		if err := req.ParseMultipartForm(defaultMultipartMemory); err != nil {
 			if !errors.Is(err, http.ErrNotMultipart) {
-				log.Println(err)
+				fmt.Println(err)
 			}
 		}
 		ctx.formCache = ctx.R.PostForm
@@ -312,4 +313,7 @@ func (ctx *Context) MustBindWith(obj any, b validate.Binder) error {
 }
 func (ctx *Context) ShouldBindWith(obj any, b validate.Binder) error {
 	return b.Bind(ctx.R, obj)
+}
+func (ctx *Context) Fail(status int, msg string) {
+	ctx.StringResponseWrite(status, msg)
 }
