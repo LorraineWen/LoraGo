@@ -1,6 +1,8 @@
 package util
 
 import (
+	"fmt"
+	"reflect"
 	"strings"
 	"unicode"
 	"unsafe"
@@ -26,4 +28,21 @@ func StringToByte(s string) []byte {
 }
 func ByteToString(bytes []byte) string {
 	return *(*string)(unsafe.Pointer(&bytes))
+}
+func JoinStrings(str ...any) string {
+	var sb strings.Builder
+	for _, v := range str {
+		sb.WriteString(check(v))
+	}
+	return sb.String()
+}
+
+func check(v any) string {
+	value := reflect.ValueOf(v)
+	switch value.Kind() {
+	case reflect.String:
+		return v.(string)
+	default:
+		return fmt.Sprintf("%v", v)
+	}
 }
