@@ -25,7 +25,7 @@ func RecoveryMiddleware(next HandleFunc) HandleFunc {
 					}
 				}
 				ctx.Logger.Error(detailMsg(err))
-				ctx.Fail(http.StatusInternalServerError, "Internal Server Error")
+				ctx.Fail(http.StatusInternalServerError, "recovery:Internal Server Error")
 			}
 		}()
 		next(ctx)

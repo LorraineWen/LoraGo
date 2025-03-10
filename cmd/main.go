@@ -61,7 +61,7 @@ func main() {
 		context.Validate = true
 		err := context.BindJson(&user)
 		if err != nil {
-			context.HandlerWithError(1000, http.StatusInternalServerError, err)
+			context.JsonResponseWrite(http.StatusOK, &RespError{Error: err.Error()})
 			return
 		}
 		context.JsonResponseWrite(http.StatusOK, user)
