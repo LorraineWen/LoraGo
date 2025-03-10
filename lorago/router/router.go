@@ -153,6 +153,7 @@ type Engine struct {
 	pool            sync.Pool                 //存放context对象，避免context对象的多次重复创建，导致多次重复释放内存和分配内存
 	Logger          *log.Logger               //初始化context里面的日志对象
 	MiddlewareFuncs []MiddlewareFunc          //初始化的处理器的时候就需要注册的中间件
+	errHandler      ErrorHandler              //支持code和status
 }
 
 func New() *Engine {
@@ -220,6 +221,12 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 	fmt.Fprintln(w, r.RequestURI+"没有找到")
 	return
+}
+
+type ErrorHandler func(err error) (int, any)
+
+func (e *Engine) RegisterErrorHandler(err ErrorHandler) {
+	e.errHandler = err
 }
 func (e *Engine) Run() {
 	//e是一个自定义的路由处理器

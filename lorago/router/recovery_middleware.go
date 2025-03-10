@@ -1,7 +1,9 @@
 package router
 
 import (
+	"errors"
 	"fmt"
+	"github.com/LorraineWen/lorago/router/lora_error"
 	"net/http"
 	"runtime"
 	"strings"
@@ -16,6 +18,12 @@ func RecoveryMiddleware(next HandleFunc) HandleFunc {
 	return func(ctx *Context) {
 		defer func() {
 			if err := recover(); err != nil {
+				if e := err.(error); e != nil {
+					var loraError *lora_error.LoraError
+					if errors.As(e, &loraError) {
+						loraError.ExecResult()
+					}
+				}
 				ctx.Logger.Error(detailMsg(err))
 				ctx.Fail(http.StatusInternalServerError, "Internal Server Error")
 			}
@@ -31,7 +39,6 @@ func detailMsg(err any) string {
 	n := runtime.Callers(3, pcs) //关键函数就在这里
 	sb.WriteString(fmt.Sprintf("%v\n", err))
 	for _, pc := range pcs[:n] {
-		//函数
 		fn := runtime.FuncForPC(pc)
 		file, line := fn.FileLine(pc)
 		sb.WriteString(fmt.Sprintf("\n\t%s:%d", file, line))

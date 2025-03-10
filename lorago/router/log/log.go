@@ -173,7 +173,7 @@ func (l *Logger) SetLogPath(logPath string) {
 	})
 	l.Outs = append(l.Outs, &LoggerWriter{
 		Level: LevelError,
-		Out:   FileWriter(path.Join(logPath, "error.log")),
+		Out:   FileWriter(path.Join(logPath, "lora_error.log")),
 	})
 }
 

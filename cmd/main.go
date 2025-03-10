@@ -13,9 +13,41 @@ type User struct {
 }
 type RespError struct {
 	Code  int    `json:"code"`
-	Error string `json:"error"`
+	Error string `json:"lora_error"`
+}
+type BlogError struct {
+	Success bool
+	Code    int64
+	Data    any
+	Msg     string
 }
 
+type BlogNoDataError struct {
+	Success bool
+	Code    int64
+	Msg     string
+}
+
+func (b *BlogError) Error() string {
+	return b.Msg
+}
+
+func (b *BlogError) Fail(code int64, msg string) {
+	b.Success = false
+	b.Code = code
+	b.Msg = msg
+}
+
+func (b *BlogError) Response() any {
+	if b.Data == nil {
+		return &BlogNoDataError{
+			Success: b.Success,
+			Code:    b.Code,
+			Msg:     b.Msg,
+		}
+	}
+	return b
+}
 func main() {
 	engine := lorago.New()
 	engine.Logger.Level = log.LevelDebug
@@ -29,7 +61,7 @@ func main() {
 		context.Validate = true
 		err := context.BindJson(&user)
 		if err != nil {
-			context.JsonResponseWrite(http.StatusInternalServerError, &RespError{Code: http.StatusInternalServerError, Error: err.Error()})
+			context.HandlerWithError(1000, http.StatusInternalServerError, err)
 			return
 		}
 		context.JsonResponseWrite(http.StatusOK, user)

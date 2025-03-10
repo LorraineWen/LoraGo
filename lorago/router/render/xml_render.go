@@ -11,7 +11,8 @@ type XmlRender struct {
 
 var xmlContentType = "application/xml; charset=utf-8"
 
-func (x *XmlRender) Render(w http.ResponseWriter) error {
+func (x *XmlRender) Render(w http.ResponseWriter, status int) error {
 	writeContentType(w, xmlContentType)
+	w.WriteHeader(status)
 	return xml.NewEncoder(w).Encode(x.Data)
 }

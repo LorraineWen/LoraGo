@@ -39,13 +39,9 @@ type Context struct {
 }
 
 // 一个多态函数，htmlRender等结构体实现了Render函数，因此可以传入htmlRender等接口体，调用它们自己的Render函数，编码html等响应格式
-func (c *Context) Render(status int, r render.Render) error {
-	//由于Render函数的底层是w.Write等函数，这些函数写完之后就自动将Header里面的状态码置为200了
-	//所以不需要重复进行写入，只要将非200的状态码写入就行了，w.Write检测到已经写入过其他状态码了，就不会再写入200了
-	if status != http.StatusOK {
-		c.W.WriteHeader(status)
-	}
-	err := r.Render(c.W)
+func (ctx *Context) Render(status int, r render.Render) error {
+	err := r.Render(ctx.W, status)
+	ctx.StatusCode = status
 	return err
 }
 
@@ -316,4 +312,19 @@ func (ctx *Context) ShouldBindWith(obj any, b validate.Binder) error {
 }
 func (ctx *Context) Fail(status int, msg string) {
 	ctx.StringResponseWrite(status, msg)
+}
+
+// 支持httpcode的设置，可以在Header中设置状态码和code
+func (ctx *Context) ErrorHandle(err error) {
+	code, data := ctx.engine.errHandler(err)
+	ctx.JsonResponseWrite(code, data)
+}
+
+func (ctx *Context) HandlerWithError(code int, obj any, err error) {
+	if err != nil {
+		statusCode, data := ctx.engine.errHandler(err)
+		ctx.JsonResponseWrite(statusCode, data)
+		return
+	}
+	ctx.JsonResponseWrite(code, obj)
 }

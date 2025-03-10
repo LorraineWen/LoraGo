@@ -19,8 +19,9 @@ type HtmlRender struct {
 	IsTemplate bool
 }
 
-func (h *HtmlRender) Render(w http.ResponseWriter) error {
+func (h *HtmlRender) Render(w http.ResponseWriter, status int) error {
 	writeContentType(w, htmlContentType)
+	w.WriteHeader(status)
 	if !h.IsTemplate {
 		_, err := w.Write([]byte(h.Data.(string)))
 		return err

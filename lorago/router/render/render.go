@@ -3,7 +3,7 @@ package render
 import "net/http"
 
 type Render interface {
-	Render(w http.ResponseWriter) error
+	Render(w http.ResponseWriter, status int) error
 }
 
 func writeContentType(w http.ResponseWriter, responseType string) {
