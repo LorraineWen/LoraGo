@@ -1,4 +1,4 @@
-package log
+package lora_log
 
 import (
 	"fmt"
@@ -161,19 +161,19 @@ func (l *Logger) SetLogPath(logPath string) {
 	l.logPath = logPath
 	l.Outs = append(l.Outs, &LoggerWriter{
 		Level: -1,
-		Out:   FileWriter(path.Join(logPath, "all.log")),
+		Out:   FileWriter(path.Join(logPath, "all.lora_log")),
 	})
 	l.Outs = append(l.Outs, &LoggerWriter{
 		Level: LevelDebug,
-		Out:   FileWriter(path.Join(logPath, "debug.log")),
+		Out:   FileWriter(path.Join(logPath, "debug.lora_log")),
 	})
 	l.Outs = append(l.Outs, &LoggerWriter{
 		Level: LevelInfo,
-		Out:   FileWriter(path.Join(logPath, "info.log")),
+		Out:   FileWriter(path.Join(logPath, "info.lora_log")),
 	})
 	l.Outs = append(l.Outs, &LoggerWriter{
 		Level: LevelError,
-		Out:   FileWriter(path.Join(logPath, "lora_error.log")),
+		Out:   FileWriter(path.Join(logPath, "lora_error.lora_log")),
 	})
 }
 
@@ -194,7 +194,7 @@ func (l *Logger) CheckFileSize(w *LoggerWriter) {
 		if size >= l.LogFileSize {
 			_, name := path.Split(stat.Name())
 			fileName := name[0:strings.Index(name, ".")]
-			writer := FileWriter(path.Join(l.logPath, util.JoinStrings(fileName, ".", time.Now().UnixMilli(), ".log")))
+			writer := FileWriter(path.Join(l.logPath, util.JoinStrings(fileName, ".", time.Now().UnixMilli(), ".lora_log")))
 			w.Out = writer
 		}
 	}

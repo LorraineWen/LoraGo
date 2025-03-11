@@ -2,7 +2,7 @@ package router
 
 import (
 	"fmt"
-	"github.com/LorraineWen/lorago/router/log"
+	"github.com/LorraineWen/lorago/router/lora_log"
 	"github.com/LorraineWen/lorago/router/render"
 	"github.com/LorraineWen/lorago/util"
 	"html/template"
@@ -151,13 +151,13 @@ type Engine struct {
 	funcMap         template.FuncMap          //设置html模板渲染时所需要的函数
 	htmlRender      render.HtmlTemplateRender //在内存中存放html模板
 	pool            sync.Pool                 //存放context对象，避免context对象的多次重复创建，导致多次重复释放内存和分配内存
-	Logger          *log.Logger               //初始化context里面的日志对象
+	Logger          *lora_log.Logger          //初始化context里面的日志对象
 	MiddlewareFuncs []MiddlewareFunc          //初始化的处理器的时候就需要注册的中间件
 	errHandler      ErrorHandler              //支持code和status
 }
 
 func New() *Engine {
-	engine := &Engine{router: &router{}, funcMap: nil, htmlRender: render.HtmlTemplateRender{}, Logger: log.NewLogger()}
+	engine := &Engine{router: &router{}, funcMap: nil, htmlRender: render.HtmlTemplateRender{}, Logger: lora_log.NewLogger()}
 	engine.pool.New = func() any {
 
 		return engine.allocateContext()

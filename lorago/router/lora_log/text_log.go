@@ -1,4 +1,4 @@
-package log
+package lora_log
 
 import (
 	"fmt"

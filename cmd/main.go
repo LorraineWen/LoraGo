@@ -3,8 +3,10 @@ package main
 import (
 	"fmt"
 	lorago "github.com/LorraineWen/lorago/router"
-	"github.com/LorraineWen/lorago/router/log"
+	"github.com/LorraineWen/lorago/router/lora_log"
+	"github.com/LorraineWen/lorago/router/lora_pool"
 	"net/http"
+	"time"
 )
 
 type User struct {
@@ -50,8 +52,8 @@ func (b *BlogError) Response() any {
 }
 func main() {
 	engine := lorago.New()
-	engine.Logger.Level = log.LevelDebug
-	engine.Logger.Formatter = log.TextFormatter{}
+	engine.Logger.Level = lora_log.LevelDebug
+	engine.Logger.Formatter = lora_log.TextFormatter{}
 	userGroup := engine.Group("user")
 	userGroup.Use(lorago.LogMiddleware)
 	userGroup.Post("/index2", func(context *lorago.Context) {
@@ -78,6 +80,37 @@ func main() {
 		} else {
 			fmt.Println(err)
 		}
+	})
+	pool, err := lora_pool.NewPool(100)
+	if err != nil {
+		fmt.Println(err)
+	}
+	pool.Submit(func() {
+		fmt.Println("1")
+		panic("my panic")
+		time.Sleep(2 * time.Second)
+	})
+	time.Sleep(2 * time.Second)
+	pool.Submit(func() {
+		fmt.Println("2")
+		time.Sleep(2 * time.Second)
+	})
+	time.Sleep(2 * time.Second)
+	pool.Submit(func() {
+		fmt.Println("3")
+		time.Sleep(2 * time.Second)
+	})
+	pool.Submit(func() {
+		fmt.Println("4")
+		time.Sleep(2 * time.Second)
+	})
+	pool.Submit(func() {
+		fmt.Println("5")
+		time.Sleep(2 * time.Second)
+	})
+	pool.Submit(func() {
+		fmt.Println("6")
+		time.Sleep(2 * time.Second)
 	})
 	engine.Run()
 }
