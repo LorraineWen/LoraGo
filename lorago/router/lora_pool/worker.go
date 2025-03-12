@@ -37,7 +37,6 @@ func (w *Worker) runTask() {
 	}()
 	for task := range w.taskChannel {
 		if task == nil {
-			w.pool.workCache.Put(w)
 			return
 		}
 		task()

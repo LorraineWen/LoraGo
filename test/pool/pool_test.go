@@ -2,6 +2,7 @@ package pool
 
 import (
 	"github.com/LorraineWen/lorago/router/lora_pool"
+	"math"
 	"runtime"
 	"sync"
 	"testing"
@@ -54,10 +55,11 @@ func TestNoPool(t *testing.T) {
 	runtime.ReadMemStats(&mem)
 	curMem = mem.TotalAlloc/MiB - curMem
 	t.Logf("memory usage:%d MB", curMem)
+	t.Logf("current goroutines:%d", runtime.NumGoroutine())
 }
 
 func TestHasPool(t *testing.T) {
-	pool, _ := lora_pool.NewPool(100)
+	pool, _ := lora_pool.NewPool(math.MaxInt32)
 	defer pool.Release()
 	var wg sync.WaitGroup
 	for i := 0; i < n; i++ {
@@ -73,6 +75,6 @@ func TestHasPool(t *testing.T) {
 	runtime.ReadMemStats(&mem)
 	curMem = mem.TotalAlloc/MiB - curMem
 	t.Logf("memory usage:%d MB", curMem)
-	t.Logf("running goroutines: %d", pool.GetRunningNum())
-	t.Logf("free goroutines: %d", pool.GetRunningNum())
+	t.Logf("running worker:%d", pool.GetRunningNum())
+	t.Logf("free worker:%d ", pool.GetFreeNum())
 }

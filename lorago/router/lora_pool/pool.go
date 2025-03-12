@@ -7,6 +7,7 @@ package lora_pool
  */
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -43,6 +44,12 @@ func NewTimePool(cap int, expire int) (*Pool, error) {
 		expireTime:  time.Duration(expire) * time.Second,
 		releaseFlag: make(chan struct{}, 1),
 	}
+	p.workCache.New = func() interface{} {
+		return &Worker{
+			pool:        p,
+			taskChannel: make(chan func(), 1),
+		}
+	}
 	p.workerCon = sync.NewCond(&p.workerLock) //需要配合锁来使用
 	go p.expireWorker()                       //单独开一个go程清理超时并且空闲的worker
 	return p, nil
@@ -52,7 +59,6 @@ func NewTimePool(cap int, expire int) (*Pool, error) {
 func (p *Pool) expireWorker() {
 	ticker := time.NewTicker(p.expireTime)
 	for range ticker.C {
-		currentTime := time.Now()
 		if len(p.releaseFlag) > 0 {
 			break
 		}
@@ -63,7 +69,7 @@ func (p *Pool) expireWorker() {
 			var clearN = -1
 			for i, w := range freeWorkers {
 				//如果wroker的最后执行任务时间和当前时间的差值小于expire就释放掉
-				if currentTime.Sub(w.lastTaskTime) <= p.expireTime {
+				if time.Now().Sub(w.lastTaskTime) <= p.expireTime {
 					break
 				}
 				//需要清除的
@@ -77,6 +83,7 @@ func (p *Pool) expireWorker() {
 				} else {
 					p.workers = freeWorkers[clearN+1:]
 				}
+				fmt.Printf("清除完成,running:%d, workers:%v \n", p.runningWorkerNum, p.workers)
 			}
 		}
 		p.workerLock.Unlock()
@@ -91,39 +98,32 @@ func (p *Pool) Submit(task func()) error {
 	//获取池里面的一个worker，然后执行任务就可以了
 	w := p.GetWorker()
 	w.taskChannel <- task
-	w.pool.AddRunningWorkerNum()
 	return nil
 }
 
-func (p *Pool) GetWorker() *Worker {
+// 获取pool里面的worker
+func (p *Pool) GetWorker() (w *Worker) {
 	//1. 目的获取pool里面的worker
-	//2. 如果有空闲的worker直接获取
+	//2. 优先使用workCache中的
+	readyWroker := func() {
+		w = p.workCache.Get().(*Worker)
+		w.run()
+	}
 	p.workerLock.Lock()
-	freeWorkers := p.workers
-	if len(freeWorkers) > 0 {
-		n := len(freeWorkers)
-		w := freeWorkers[n-1]
-		freeWorkers[n-1] = nil
-		p.workers = freeWorkers[:n-1]
+	workers := p.workers
+	n := len(workers) - 1
+	if n > 0 {
+		w = workers[n]
+		workers[n] = nil
+		p.workers = workers[:n]
 		p.workerLock.Unlock()
 		return w
 	}
 	//3. 如果没有空闲的worker，要新建一个worker
 	if p.runningWorkerNum < p.capacity {
 		p.workerLock.Unlock()
-		c := p.workCache.Get()
-		var w *Worker
-		//如果缓存中有worker就不用创建新的了
-		if c == nil {
-			w = &Worker{
-				pool:        p,
-				taskChannel: make(chan func(), 1),
-			}
-		} else {
-			w = c.(*Worker)
-		}
-		w.run()
-		return w
+		readyWroker()
+		return
 	}
 	p.workerLock.Unlock()
 	//4. 如果正在运行的workers 如果大于pool容量，阻塞等待，worker释放
@@ -182,6 +182,9 @@ func (p *Pool) Release() {
 		//将所有的worker里面的资源都释放了
 		workers := p.workers
 		for i, w := range workers {
+			if w == nil {
+				continue
+			}
 			w.taskChannel = nil
 			w.pool = nil
 			workers[i] = nil
@@ -194,7 +197,6 @@ func (p *Pool) Release() {
 }
 
 func (p *Pool) IsClosed() bool {
-
 	return len(p.releaseFlag) > 0
 }
 
@@ -203,6 +205,7 @@ func (p *Pool) Restart() bool {
 		return true
 	}
 	_ = <-p.releaseFlag
+	go p.expireWorker()
 	return true
 }
 func (p *Pool) GetRunningNum() int {

@@ -6,6 +6,7 @@ import (
 	"github.com/LorraineWen/lorago/router/lora_log"
 	"github.com/LorraineWen/lorago/router/lora_pool"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -50,6 +51,14 @@ func (b *BlogError) Response() any {
 	}
 	return b
 }
+
+var i int
+
+func demoFunc() {
+	fmt.Println(i)
+	i++
+	time.Sleep(time.Duration(10) * time.Millisecond)
+}
 func main() {
 	engine := lorago.New()
 	engine.Logger.Level = lora_log.LevelDebug
@@ -85,32 +94,16 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	pool.Submit(func() {
-		fmt.Println("1")
-		panic("my panic")
-		time.Sleep(2 * time.Second)
-	})
-	time.Sleep(2 * time.Second)
-	pool.Submit(func() {
-		fmt.Println("2")
-		time.Sleep(2 * time.Second)
-	})
-	time.Sleep(2 * time.Second)
-	pool.Submit(func() {
-		fmt.Println("3")
-		time.Sleep(2 * time.Second)
-	})
-	pool.Submit(func() {
-		fmt.Println("4")
-		time.Sleep(2 * time.Second)
-	})
-	pool.Submit(func() {
-		fmt.Println("5")
-		time.Sleep(2 * time.Second)
-	})
-	pool.Submit(func() {
-		fmt.Println("6")
-		time.Sleep(2 * time.Second)
-	})
+	defer pool.Release()
+	var wg sync.WaitGroup
+	for i := 0; i < 10000; i++ {
+		wg.Add(1)
+		_ = pool.Submit(func() {
+			demoFunc()
+			wg.Done()
+		})
+	}
+	wg.Wait()
+	fmt.Printf("正在运行的:%d", pool.GetRunningNum())
 	engine.Run()
 }
