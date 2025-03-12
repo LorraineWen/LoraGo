@@ -104,6 +104,6 @@ func main() {
 		})
 	}
 	wg.Wait()
-	fmt.Printf("正在运行的:%d", pool.GetRunningNum())
+	fmt.Printf("正在运行的:%d\n", pool.GetRunningNum())
 	engine.Run()
 }
