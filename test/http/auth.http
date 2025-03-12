@@ -1,0 +1,6 @@
+### 测试basic认证
+GET http://localhost:8080/user/index2
+Authorization: Basic YWRtaW46MTIzNDU=
+### 测试jwt认证
+GET http://localhost:8080/user/login
+Authorization: Basic YWRtaW46MTIzNDU=

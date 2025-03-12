@@ -1,4 +1,4 @@
-package util
+package lora_util
 
 import (
 	"fmt"

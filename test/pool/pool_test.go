@@ -1,7 +1,7 @@
 package pool
 
 import (
-	"github.com/LorraineWen/lorago/router/lora_pool"
+	"github.com/LorraineWen/lorago/lora_router/lora_pool"
 	"math"
 	"runtime"
 	"sync"

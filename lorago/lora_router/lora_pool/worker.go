@@ -1,7 +1,7 @@
 package lora_pool
 
 import (
-	"github.com/LorraineWen/lorago/router/lora_log"
+	"github.com/LorraineWen/lorago/lora_router/lora_log"
 	"time"
 )
 

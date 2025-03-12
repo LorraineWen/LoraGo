@@ -1,4 +1,4 @@
-package router
+package lora_router
 
 import (
 	"fmt"
@@ -17,24 +17,6 @@ import (
 *支持日志格式自定义
 *支持分级日志，比如error级别的日志，info级别的日志，debug级别的日志
  */
-//各种颜色
-const (
-	greenBg   = "\033[97;42m"
-	whiteBg   = "\033[90;47m"
-	yellowBg  = "\033[90;43m"
-	redBg     = "\033[97;41m"
-	blueBg    = "\033[97;44m"
-	magentaBg = "\033[97;45m"
-	cyanBg    = "\033[97;46m"
-	green     = "\033[32m"
-	white     = "\033[37m"
-	yellow    = "\033[33m"
-	red       = "\033[31m"
-	blue      = "\033[34m"
-	magenta   = "\033[35m"
-	cyan      = "\033[36m"
-	reset     = "\033[0m"
-)
 
 type LoggerConfig struct {
 	Formatter LogMiddlewareFormatter //支持格式化输出
@@ -57,6 +39,24 @@ type LogFormatterParams struct {
 }
 
 // 支持日志颜色
+const (
+	greenBg   = "\033[97;42m"
+	whiteBg   = "\033[90;47m"
+	yellowBg  = "\033[90;43m"
+	redBg     = "\033[97;41m"
+	blueBg    = "\033[97;44m"
+	magentaBg = "\033[97;45m"
+	cyanBg    = "\033[97;46m"
+	green     = "\033[32m"
+	white     = "\033[37m"
+	yellow    = "\033[33m"
+	red       = "\033[31m"
+	blue      = "\033[34m"
+	magenta   = "\033[35m"
+	cyan      = "\033[36m"
+	reset     = "\033[0m"
+)
+
 func (p *LogFormatterParams) StatusCodeColor() string {
 	code := p.StatusCode
 	switch code {

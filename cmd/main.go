@@ -2,108 +2,55 @@ package main
 
 import (
 	"fmt"
-	lorago "github.com/LorraineWen/lorago/router"
-	"github.com/LorraineWen/lorago/router/lora_log"
-	"github.com/LorraineWen/lorago/router/lora_pool"
+	lorago "github.com/LorraineWen/lorago/lora_router"
+	"github.com/LorraineWen/lorago/lora_router/lora_auth"
+	"log"
 	"net/http"
-	"sync"
 	"time"
 )
 
-type User struct {
-	Name string `json:"name" validate:"required" binding:"required" xml:"name"`
-	Age  int    `json:"age" validate:"required,max=50,min=18" xml:"age"`
-}
-type RespError struct {
-	Code  int    `json:"code"`
-	Error string `json:"lora_error"`
-}
-type BlogError struct {
-	Success bool
-	Code    int64
-	Data    any
-	Msg     string
-}
-
-type BlogNoDataError struct {
-	Success bool
-	Code    int64
-	Msg     string
-}
-
-func (b *BlogError) Error() string {
-	return b.Msg
-}
-
-func (b *BlogError) Fail(code int64, msg string) {
-	b.Success = false
-	b.Code = code
-	b.Msg = msg
-}
-
-func (b *BlogError) Response() any {
-	if b.Data == nil {
-		return &BlogNoDataError{
-			Success: b.Success,
-			Code:    b.Code,
-			Msg:     b.Msg,
-		}
-	}
-	return b
-}
-
-var i int
-
-func demoFunc() {
-	fmt.Println(i)
-	i++
-	time.Sleep(time.Duration(10) * time.Millisecond)
-}
 func main() {
 	engine := lorago.New()
-	engine.Logger.Level = lora_log.LevelDebug
-	engine.Logger.Formatter = lora_log.TextFormatter{}
 	userGroup := engine.Group("user")
-	userGroup.Use(lorago.LogMiddleware)
-	userGroup.Post("/index2", func(context *lorago.Context) {
-		user := []User{}
-		context.ValidateAnother = true
-		context.DisallowUnknownFields = true
-		context.Validate = true
-		err := context.BindJson(&user)
-		if err != nil {
-			context.JsonResponseWrite(http.StatusOK, &RespError{Error: err.Error()})
-			return
-		}
+	//创建basic验证实体
+	base64 := lorago.BasicAuth("admin", "12345")
+	fmt.Println(base64)
+	basicAuth := lorago.BasicAuthEntity{
+		UnAuthFunc: func(ctx *lorago.Context) {
+			ctx.W.Write([]byte("验证失败"))
+		},
+		Users: make(map[string]string),
+	}
+	//这个就是数据库里面存放的用户和对应的密码
+	basicAuth.Users["admin"] = "12345"
+	//使用basic验证中间件
+	userGroup.Use(basicAuth.BasicAuthMiddleware)
+	userGroup.Get("/index2", func(context *lorago.Context) {
+		user := make(map[string]string)
+		user["name"] = "amie"
+		user["age"] = "18"
 		context.JsonResponseWrite(http.StatusOK, user)
 	})
-	var u1 *User
-	userGroup.Post("/index1", func(ctx *lorago.Context) {
-		ctx.Logger.Debug("hello")
-		ctx.Logger.Info("hello1")
-		u1.Age = 1
-		user := &User{}
-		err := ctx.BindXml(user)
-		if err == nil {
-			ctx.JsonResponseWrite(http.StatusOK, user)
-		} else {
-			fmt.Println(err)
+	jwt := &lora_auth.JwtAuth{Key: []byte("123456")}
+	engine.Use(jwt.JwtAuthMiddleware)
+	userGroup.Get("/login", func(ctx *lorago.Context) {
+
+		jwt := &lora_auth.JwtAuth{}
+		jwt.Key = []byte("123456")
+		jwt.SendCookie = true
+		jwt.TimeOut = 10 * time.Minute
+		jwt.Authenticator = func(ctx *lorago.Context) (map[string]any, error) {
+			data := make(map[string]any)
+			data["userId"] = 1
+			return data, nil
 		}
+		token, err := jwt.LoginHandler(ctx)
+		if err != nil {
+			log.Println(err)
+			ctx.JsonResponseWrite(http.StatusOK, err.Error())
+			return
+		}
+		ctx.JsonResponseWrite(http.StatusOK, token)
 	})
-	pool, err := lora_pool.NewPool(100)
-	if err != nil {
-		fmt.Println(err)
-	}
-	defer pool.Release()
-	var wg sync.WaitGroup
-	for i := 0; i < 10000; i++ {
-		wg.Add(1)
-		_ = pool.Submit(func() {
-			demoFunc()
-			wg.Done()
-		})
-	}
-	wg.Wait()
-	fmt.Printf("正在运行的:%d", pool.GetRunningNum())
 	engine.Run()
 }

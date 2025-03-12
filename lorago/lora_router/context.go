@@ -1,18 +1,19 @@
-package router
+package lora_router
 
 import (
 	"errors"
 	"fmt"
-	"github.com/LorraineWen/lorago/router/lora_log"
-	"github.com/LorraineWen/lorago/router/render"
-	"github.com/LorraineWen/lorago/router/validate"
-	"github.com/LorraineWen/lorago/util"
+	"github.com/LorraineWen/lorago/lora_router/lora_bind"
+	"github.com/LorraineWen/lorago/lora_router/lora_log"
+	lora_render2 "github.com/LorraineWen/lorago/lora_router/lora_render"
+	"github.com/LorraineWen/lorago/lora_util"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 )
 
 /*
@@ -28,18 +29,21 @@ const defaultMultipartMemory = 30 << 20 //30MB大小用来加载post表单里面
 type Context struct {
 	W                     http.ResponseWriter
 	R                     *http.Request
-	engine                *Engine    //用于获取模板渲染函数
-	StatusCode            int        //存放响应结果
-	queryCache            url.Values //用于获取请求路径中的参数，实际上就是map[string[]string
-	formCache             url.Values //用于获取post请求中的表单数据
-	DisallowUnknownFields bool       //设置参数属性检查，json参数中有的属性，如果绑定的结构体没有就报错
-	Validate              bool       //设置结构体属性检查，如果json参数中没有该结构体的相应属性，那么就会报错
-	ValidateAnother       bool       //启用第三方的校验
-	Logger                *lora_log.Logger
+	engine                *Engine          //用于获取模板渲染函数
+	StatusCode            int              //存放响应结果
+	queryCache            url.Values       //用于获取请求路径中的参数，实际上就是map[string[]string
+	formCache             url.Values       //用于获取post请求中的表单数据
+	DisallowUnknownFields bool             //设置参数属性检查，json参数中有的属性，如果绑定的结构体没有就报错
+	Validate              bool             //设置结构体属性检查，如果json参数中没有该结构体的相应属性，那么就会报错
+	ValidateAnother       bool             //启用第三方的校验
+	Logger                *lora_log.Logger //日志模块
+	basicKeys             map[string]any   //用于basic身份验证，实际上是通过中间件实现basic验证
+	rwMutex               sync.RWMutex     //用于basic身份验证的读写锁
+	sameSite              http.SameSite    //用于jwt验证的安全验证
 }
 
 // 一个多态函数，htmlRender等结构体实现了Render函数，因此可以传入htmlRender等接口体，调用它们自己的Render函数，编码html等响应格式
-func (ctx *Context) Render(status int, r render.Render) error {
+func (ctx *Context) Render(status int, r lora_render2.Render) error {
 	err := r.Render(ctx.W, status)
 	ctx.StatusCode = status
 	return err
@@ -47,28 +51,28 @@ func (ctx *Context) Render(status int, r render.Render) error {
 
 // 支持html格式响应
 func (ctx *Context) HtmlResponseWrite(status int, data any) error {
-	err := ctx.Render(status, &render.HtmlRender{IsTemplate: false, Data: data})
+	err := ctx.Render(status, &lora_render2.HtmlRender{IsTemplate: false, Data: data})
 	return err
 }
 
 // 支持json格式响应
 // 调用方式context.JsonResponseWrite(http.StatusOK, &User{Name: "amie"})
 func (ctx *Context) JsonResponseWrite(status int, data any) error {
-	err := ctx.Render(status, &render.JsonRender{Data: data})
+	err := ctx.Render(status, &lora_render2.JsonRender{Data: data})
 	return err
 }
 
 // 支持xml格式响应
 // 调用方式context.Xml(http.StatusOK, &User{Name: "amie"})
 func (ctx *Context) XmlResponseWrite(status int, data any) error {
-	err := ctx.Render(status, &render.XmlRender{Data: data})
+	err := ctx.Render(status, &lora_render2.XmlRender{Data: data})
 	return err
 }
 
 // 支持格式化String格式响应
 // 调用方式context.StringResponseWrite(http.StatusOK, "你好 %s", "amie")
 func (ctx *Context) StringResponseWrite(status int, format string, data ...any) (err error) {
-	err = ctx.Render(status, &render.StringRender{
+	err = ctx.Render(status, &lora_render2.StringRender{
 		Format: format,
 		Data:   data,
 	})
@@ -85,7 +89,7 @@ func (ctx *Context) StringResponseWrite(status int, format string, data ...any) 
 //
 // name是../test/template目录下的具体html文件的名称
 func (ctx *Context) TemplateResponseWrite(status int, name string, data any) error {
-	err := ctx.Render(status, &render.HtmlRender{
+	err := ctx.Render(status, &lora_render2.HtmlRender{
 		IsTemplate: true,
 		Name:       name,
 		Data:       data,
@@ -101,7 +105,7 @@ func (ctx *Context) FileResponseWrite(filePath string) {
 
 // 支持自定义文件名称下载，下载好的文件名称自动变为filename
 func (ctx *Context) FileAttachmentResponseWrite(filepath, filename string) {
-	if util.IsASCII(filename) {
+	if lora_util.IsASCII(filename) {
 		ctx.W.Header().Set("Content-Disposition", `attachment; filename="`+filename+`"`)
 	} else {
 		ctx.W.Header().Set("Content-Disposition", `attachment; filename*=UTF-8''`+url.QueryEscape(filename))
@@ -199,7 +203,7 @@ func (ctx *Context) initFormCache() {
 }
 
 // 获取post请求中的参数，由于调用的是ParseMultipartForm，所以只能下面这种格式的post请求
-// ### POST test post router
+// ### POST test post lora_router
 // POST http://localhost:8080/user/index
 // Content-Type: application/x-www-form-urlencoded
 //
@@ -210,7 +214,7 @@ func (ctx *Context) GetFormQuery(key string) string {
 	return ctx.formCache.Get(key)
 }
 
-// ### POST test post router
+// ### POST test post lora_router
 // POST http://localhost:8080/user/index2
 // Content-Type: application/x-www-form-urlencoded
 //
@@ -289,7 +293,7 @@ func (ctx *Context) SaveUploadedFile(file *multipart.FileHeader, dst string) err
 // 解析post请求中的json格式数据
 // 如果要解析属性校验，需要在注册路由的时候，将Validate两个bool值设置为true
 func (ctx *Context) BindJson(data any) error {
-	jsonBinder := validate.JsonBinder
+	jsonBinder := lora_bind.JsonBinder
 	jsonBinder.DisallowUnknownFields = ctx.DisallowUnknownFields
 	jsonBinder.IsValidate = ctx.Validate
 	jsonBinder.IsValidateAnother = ctx.ValidateAnother
@@ -298,16 +302,16 @@ func (ctx *Context) BindJson(data any) error {
 
 // 支持xml格式校验
 func (ctx *Context) BindXml(obj any) error {
-	return ctx.MustBindWith(obj, validate.XmlBinder)
+	return ctx.MustBindWith(obj, lora_bind.XmlBinder)
 }
-func (ctx *Context) MustBindWith(obj any, b validate.Binder) error {
+func (ctx *Context) MustBindWith(obj any, b lora_bind.Binder) error {
 	//如果发生错误，返回400状态码 参数错误
 	if err := ctx.ShouldBindWith(obj, b); err != nil {
 		return err
 	}
 	return nil
 }
-func (ctx *Context) ShouldBindWith(obj any, b validate.Binder) error {
+func (ctx *Context) ShouldBindWith(obj any, b lora_bind.Binder) error {
 	return b.Bind(ctx.R, obj)
 }
 func (ctx *Context) Fail(status int, msg string) {
@@ -327,4 +331,55 @@ func (ctx *Context) HandlerWithError(code int, obj any, err error) {
 		return
 	}
 	ctx.JsonResponseWrite(code, obj)
+}
+func (ctx *Context) BasicSet(key string, value any) {
+	ctx.rwMutex.Lock()
+	defer ctx.rwMutex.Unlock()
+	if ctx.basicKeys == nil {
+		ctx.basicKeys = make(map[string]interface{})
+	}
+	ctx.basicKeys[key] = value
+}
+func (ctx *Context) BasicGet(key string) (value any, exist bool) {
+	ctx.rwMutex.Lock()
+	defer ctx.rwMutex.Unlock()
+	value, exist = ctx.basicKeys[key]
+	return
+}
+
+// basic验证特有的"Authorization: Basic ${basic}"验证格式
+func (c *Context) SetBasicAuth(username, password string) {
+	c.R.Header.Set("Authorization", "Basic "+BasicAuth(username, password))
+}
+
+// 设置Cookie
+func (ctx *Context) SetCookie(name, value string, maxAge int, path, domain string, secure, httpOnly bool) {
+	if path == "" {
+		path = "/"
+	}
+	http.SetCookie(ctx.W, &http.Cookie{
+		Name:     name,
+		Value:    url.QueryEscape(value),
+		MaxAge:   maxAge,
+		Path:     path,
+		Domain:   domain,
+		SameSite: ctx.sameSite,
+		Secure:   secure,
+		HttpOnly: httpOnly,
+	})
+}
+func (c *Context) GetCookie(name string) string {
+	cookie, err := c.R.Cookie(name)
+	if err != nil {
+		return ""
+	}
+	if cookie != nil {
+		return cookie.Value
+	}
+	return ""
+}
+
+// 用于设置SameSet
+func (ctx *Context) SetSameSet(sameSet http.SameSite) {
+	ctx.sameSite = sameSet
 }

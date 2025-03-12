@@ -2,7 +2,7 @@ package lora_log
 
 import (
 	"fmt"
-	"github.com/LorraineWen/lorago/util"
+	"github.com/LorraineWen/lorago/lora_util"
 	"io"
 	"log"
 	"os"
@@ -194,7 +194,7 @@ func (l *Logger) CheckFileSize(w *LoggerWriter) {
 		if size >= l.LogFileSize {
 			_, name := path.Split(stat.Name())
 			fileName := name[0:strings.Index(name, ".")]
-			writer := FileWriter(path.Join(l.logPath, util.JoinStrings(fileName, ".", time.Now().UnixMilli(), ".lora_log")))
+			writer := FileWriter(path.Join(l.logPath, lora_util.JoinStrings(fileName, ".", time.Now().UnixMilli(), ".lora_log")))
 			w.Out = writer
 		}
 	}

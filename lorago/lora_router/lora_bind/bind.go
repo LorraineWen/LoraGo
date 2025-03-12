@@ -1,4 +1,4 @@
-package validate
+package lora_bind
 
 import "net/http"
 

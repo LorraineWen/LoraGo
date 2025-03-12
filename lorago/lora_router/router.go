@@ -1,11 +1,12 @@
-package router
+package lora_router
 
 import (
 	"fmt"
-	"github.com/LorraineWen/lorago/router/lora_log"
-	"github.com/LorraineWen/lorago/router/render"
-	"github.com/LorraineWen/lorago/util"
+	"github.com/LorraineWen/lorago/lora_router/lora_log"
+	"github.com/LorraineWen/lorago/lora_router/lora_render"
+	"github.com/LorraineWen/lorago/lora_util"
 	"html/template"
+	"log"
 	"net/http"
 	"sync"
 )
@@ -148,16 +149,16 @@ func (r *routerGroup) MiddlewareHandleFunc(ctx *Context, name, method string, ha
 // 这里是直接嵌入了类型，所以Engine继承了router的方法和成员
 type Engine struct {
 	*router
-	funcMap         template.FuncMap          //设置html模板渲染时所需要的函数
-	htmlRender      render.HtmlTemplateRender //在内存中存放html模板
-	pool            sync.Pool                 //存放context对象，避免context对象的多次重复创建，导致多次重复释放内存和分配内存
-	Logger          *lora_log.Logger          //初始化context里面的日志对象
-	MiddlewareFuncs []MiddlewareFunc          //初始化的处理器的时候就需要注册的中间件
-	errHandler      ErrorHandler              //支持code和status
+	funcMap         template.FuncMap               //设置html模板渲染时所需要的函数
+	htmlRender      lora_render.HtmlTemplateRender //在内存中存放html模板
+	pool            sync.Pool                      //存放context对象，避免context对象的多次重复创建，导致多次重复释放内存和分配内存
+	Logger          *lora_log.Logger               //初始化context里面的日志对象
+	MiddlewareFuncs []MiddlewareFunc               //初始化的处理器的时候就需要注册的中间件
+	errHandler      ErrorHandler                   //支持code和status
 }
 
 func New() *Engine {
-	engine := &Engine{router: &router{}, funcMap: nil, htmlRender: render.HtmlTemplateRender{}, Logger: lora_log.NewLogger()}
+	engine := &Engine{router: &router{}, funcMap: nil, htmlRender: lora_render.HtmlTemplateRender{}, Logger: lora_log.NewLogger()}
 	engine.pool.New = func() any {
 
 		return engine.allocateContext()
@@ -185,7 +186,7 @@ func (e *Engine) SetFuncMap(funcMap template.FuncMap) {
 // 调用方式:engine.LoadTemplate("../test/template/*.html")
 func (e *Engine) LoadTemplate(pattern string) {
 	t := template.Must(template.New("").Funcs(e.funcMap).ParseGlob(pattern))
-	e.htmlRender = render.HtmlTemplateRender{Template: t}
+	e.htmlRender = lora_render.HtmlTemplateRender{Template: t}
 }
 
 // Engine需要实现ServeHTTP函数，才能实现Hanler接口，Engine才能成为一个自定义的路由处理器
@@ -197,7 +198,7 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx.Logger = e.Logger
 	for _, group := range e.routerGroups {
 		//判断请求中的URL里面是否包含分组路径
-		routerName := util.SubStringLast(r.URL.Path, "/"+group.groupName) //如果url中包含分组路径，那么就返回url中分组路径后面的请求路径，/user/getname，返回/getname
+		routerName := lora_util.SubStringLast(r.URL.Path, "/"+group.groupName) //如果url中包含分组路径，那么就返回url中分组路径后面的请求路径，/user/getname，返回/getname
 		node := group.trieNode.get(routerName)
 		//对于/user/getname/1,routerName=/getname/1
 		//node.routerName=/get/name/:id，这也是我们实际注册的路由，所应该应该使用node.routerName来索引得到处理routerName的函数
@@ -221,6 +222,14 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 	fmt.Fprintln(w, r.RequestURI+"没有找到")
 	return
+}
+
+// 开启https验证
+func (e *Engine) RunTLS(addr, certFile, keyFile string) {
+	err := http.ListenAndServeTLS(addr, certFile, keyFile, e)
+	if err != nil {
+		log.Fatal("ListenAndServeTLS: ", err)
+	}
 }
 
 type ErrorHandler func(err error) (int, any)

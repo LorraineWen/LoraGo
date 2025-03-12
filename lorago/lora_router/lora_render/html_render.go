@@ -1,4 +1,4 @@
-package render
+package lora_render
 
 import (
 	"html/template"

@@ -1,9 +1,9 @@
-package router
+package lora_router
 
 import (
 	"errors"
 	"fmt"
-	"github.com/LorraineWen/lorago/router/lora_error"
+	"github.com/LorraineWen/lorago/lora_router/lora_error"
 	"net/http"
 	"runtime"
 	"strings"

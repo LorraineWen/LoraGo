@@ -1,8 +1,8 @@
-package render
+package lora_render
 
 import (
 	"fmt"
-	"github.com/LorraineWen/lorago/util"
+	"github.com/LorraineWen/lorago/lora_util"
 	"net/http"
 )
 
@@ -23,6 +23,6 @@ func (s *StringRender) Render(w http.ResponseWriter, status int) error {
 		}
 		return nil
 	}
-	_, err := w.Write(util.StringToByte(s.Format))
+	_, err := w.Write(lora_util.StringToByte(s.Format))
 	return err
 }
