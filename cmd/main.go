@@ -31,8 +31,8 @@ func main() {
 		user["age"] = "18"
 		context.JsonResponseWrite(http.StatusOK, user)
 	})
-	jwt := &lora_auth.JwtAuth{Key: []byte("123456")}
-	engine.Use(jwt.JwtAuthMiddleware)
+	jwtMiddleware := &lora_auth.JwtAuth{Key: []byte("123456")}
+	engine.Use(jwtMiddleware.JwtAuthMiddleware)
 	userGroup.Get("/login", func(ctx *lorago.Context) {
 
 		jwt := &lora_auth.JwtAuth{}
