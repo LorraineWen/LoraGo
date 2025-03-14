@@ -1,0 +1,36 @@
+[33m [lorago] [0m [34m2025/03/14 - 22:13:54[0m | level= [31m ERROR [0m[31m
+ Error Cause By:  interface conversion: string is not error: missing method Error
+
+	E:/FrameWork/Go1.22.10/src/runtime/panic.go:766
+	E:/FrameWork/Go1.22.10/src/runtime/iface.go:93
+	E:/FrameWork/Go1.22.10/src/runtime/iface.go:457
+	E:/CodeLamp/golang/LoraGo/lorago/lora_router/recovery_middleware.go:27
+	E:/FrameWork/Go1.22.10/src/runtime/panic.go:766
+	E:/CodeLamp/golang/LoraGo/cmd/main.go:12
+	E:/CodeLamp/golang/LoraGo/lorago/lora_router/recovery_middleware.go:32
+	E:/CodeLamp/golang/LoraGo/lorago/lora_router/log_middleware.go:124
+	E:/CodeLamp/golang/LoraGo/lorago/lora_router/recovery_middleware.go:32
+	E:/CodeLamp/golang/LoraGo/lorago/lora_router/log_middleware.go:124
+	E:/CodeLamp/golang/LoraGo/lorago/lora_router/router.go:148
+	E:/CodeLamp/golang/LoraGo/lorago/lora_router/router.go:236
+	E:/FrameWork/Go1.22.10/src/net/http/server.go:3143
+	E:/FrameWork/Go1.22.10/src/net/http/server.go:2045
+	E:/FrameWork/Go1.22.10/src/runtime/asm_amd64.s:1696 [0m  
+[33m [lorago] [0m [34m2025/03/14 - 22:15:58[0m | level= [31m ERROR [0m[31m
+ Error Cause By:  interface conversion: string is not error: missing method Error
+
+	E:/FrameWork/Go1.22.10/src/runtime/panic.go:766
+	E:/FrameWork/Go1.22.10/src/runtime/iface.go:93
+	E:/FrameWork/Go1.22.10/src/runtime/iface.go:457
+	E:/CodeLamp/golang/LoraGo/lorago/lora_router/recovery_middleware.go:27
+	E:/FrameWork/Go1.22.10/src/runtime/panic.go:766
+	E:/CodeLamp/golang/LoraGo/cmd/main.go:12
+	E:/CodeLamp/golang/LoraGo/lorago/lora_router/recovery_middleware.go:32
+	E:/CodeLamp/golang/LoraGo/lorago/lora_router/log_middleware.go:124
+	E:/CodeLamp/golang/LoraGo/lorago/lora_router/recovery_middleware.go:32
+	E:/CodeLamp/golang/LoraGo/lorago/lora_router/log_middleware.go:124
+	E:/CodeLamp/golang/LoraGo/lorago/lora_router/router.go:148
+	E:/CodeLamp/golang/LoraGo/lorago/lora_router/router.go:236
+	E:/FrameWork/Go1.22.10/src/net/http/server.go:3143
+	E:/FrameWork/Go1.22.10/src/net/http/server.go:2045
+	E:/FrameWork/Go1.22.10/src/runtime/asm_amd64.s:1696 [0m  

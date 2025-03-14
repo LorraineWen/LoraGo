@@ -8,6 +8,7 @@ package lora_pool
 import (
 	"errors"
 	"fmt"
+	"github.com/LorraineWen/lorago/lora_conf"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -32,6 +33,14 @@ func NewPool(cap int) (*Pool, error) {
 	return NewTimePool(cap, DefaultExpire)
 }
 
+// 通过配置文件加载go程池的属性
+func NewPoolConf() (*Pool, error) {
+	capacity, ok := lora_conf.TomlConf.Pool["cap"]
+	if !ok {
+		panic("conf pool.cap not config")
+	}
+	return NewTimePool(int(capacity.(int64)), DefaultExpire)
+}
 func NewTimePool(cap int, expire int) (*Pool, error) {
 	if cap <= 0 {
 		return nil, errors.New("go程池的容量必须大于0")

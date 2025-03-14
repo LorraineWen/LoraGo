@@ -3,7 +3,7 @@ package lora_router
 import (
 	"errors"
 	"fmt"
-	"github.com/LorraineWen/lorago/lora_router/lora_error"
+	"github.com/LorraineWen/lorago/lora_error"
 	"net/http"
 	"runtime"
 	"strings"
@@ -19,7 +19,7 @@ func RecoveryMiddleware(next HandleFunc) HandleFunc {
 		defer func() {
 			if err := recover(); err != nil {
 				if e := err.(error); e != nil {
-					var loraError *lora_error.LoraError
+					var loraError *lora_error.Error
 					if errors.As(e, &loraError) {
 						loraError.ExecResult()
 					}
