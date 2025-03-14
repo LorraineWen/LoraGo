@@ -2,8 +2,9 @@ package lora_router
 
 import (
 	"fmt"
-	"github.com/LorraineWen/lorago/lora_router/lora_log"
-	"github.com/LorraineWen/lorago/lora_router/lora_render"
+	"github.com/LorraineWen/lorago/lora_conf"
+	"github.com/LorraineWen/lorago/lora_log"
+	"github.com/LorraineWen/lorago/lora_render"
 	"github.com/LorraineWen/lorago/lora_util"
 	"html/template"
 	"log"
@@ -157,6 +158,7 @@ type Engine struct {
 	errHandler      ErrorHandler                   //支持code和status
 }
 
+// 直接初始化引擎
 func New() *Engine {
 	engine := &Engine{router: &router{}, funcMap: nil, htmlRender: lora_render.HtmlTemplateRender{}, Logger: lora_log.NewLogger()}
 	engine.pool.New = func() any {
@@ -165,6 +167,17 @@ func New() *Engine {
 	}
 	engine.Use(RecoveryMiddleware, LogMiddleware) //自动使用日志和panic捕获的中间件
 	engine.router.engine = engine
+	return engine
+}
+
+// 通过配置文件初始化引擎
+func Default() *Engine {
+	engine := New()
+	logPath, ok := lora_conf.TomlConf.Log["path"]
+	if ok {
+		engine.Logger.SetLogPath(logPath.(string))
+	}
+	engine.Use(RecoveryMiddleware, LogMiddleware)
 	return engine
 }
 func (e *Engine) Use(middlewareFunc ...MiddlewareFunc) {
@@ -177,6 +190,15 @@ func (e *Engine) allocateContext() any {
 }
 
 // 以下三个函数都是在渲染html模板时，需要调用的函数
+// 通过配置文件加载模板
+func (e *Engine) LoadTemplateGlobByConf() {
+	pattern, ok := lora_conf.TomlConf.Template["pattern"]
+	if !ok {
+		panic("config pattern not exist")
+	}
+	e.LoadTemplate(pattern.(string))
+}
+
 // 设置html需要的一些函数
 func (e *Engine) SetFuncMap(funcMap template.FuncMap) {
 	e.funcMap = funcMap

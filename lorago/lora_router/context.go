@@ -3,9 +3,9 @@ package lora_router
 import (
 	"errors"
 	"fmt"
-	"github.com/LorraineWen/lorago/lora_router/lora_bind"
-	"github.com/LorraineWen/lorago/lora_router/lora_log"
-	lora_render2 "github.com/LorraineWen/lorago/lora_router/lora_render"
+	"github.com/LorraineWen/lorago/lora_bind"
+	"github.com/LorraineWen/lorago/lora_log"
+	"github.com/LorraineWen/lorago/lora_render"
 	"github.com/LorraineWen/lorago/lora_util"
 	"io"
 	"mime/multipart"
@@ -43,7 +43,7 @@ type Context struct {
 }
 
 // 一个多态函数，htmlRender等结构体实现了Render函数，因此可以传入htmlRender等接口体，调用它们自己的Render函数，编码html等响应格式
-func (ctx *Context) Render(status int, r lora_render2.Render) error {
+func (ctx *Context) Render(status int, r lora_render.Render) error {
 	err := r.Render(ctx.W, status)
 	ctx.StatusCode = status
 	return err
@@ -51,28 +51,28 @@ func (ctx *Context) Render(status int, r lora_render2.Render) error {
 
 // 支持html格式响应
 func (ctx *Context) HtmlResponseWrite(status int, data any) error {
-	err := ctx.Render(status, &lora_render2.HtmlRender{IsTemplate: false, Data: data})
+	err := ctx.Render(status, &lora_render.HtmlRender{IsTemplate: false, Data: data})
 	return err
 }
 
 // 支持json格式响应
 // 调用方式context.JsonResponseWrite(http.StatusOK, &User{Name: "amie"})
 func (ctx *Context) JsonResponseWrite(status int, data any) error {
-	err := ctx.Render(status, &lora_render2.JsonRender{Data: data})
+	err := ctx.Render(status, &lora_render.JsonRender{Data: data})
 	return err
 }
 
 // 支持xml格式响应
 // 调用方式context.Xml(http.StatusOK, &User{Name: "amie"})
 func (ctx *Context) XmlResponseWrite(status int, data any) error {
-	err := ctx.Render(status, &lora_render2.XmlRender{Data: data})
+	err := ctx.Render(status, &lora_render.XmlRender{Data: data})
 	return err
 }
 
 // 支持格式化String格式响应
 // 调用方式context.StringResponseWrite(http.StatusOK, "你好 %s", "amie")
 func (ctx *Context) StringResponseWrite(status int, format string, data ...any) (err error) {
-	err = ctx.Render(status, &lora_render2.StringRender{
+	err = ctx.Render(status, &lora_render.StringRender{
 		Format: format,
 		Data:   data,
 	})
@@ -89,7 +89,7 @@ func (ctx *Context) StringResponseWrite(status int, format string, data ...any) 
 //
 // name是../test/template目录下的具体html文件的名称
 func (ctx *Context) TemplateResponseWrite(status int, name string, data any) error {
-	err := ctx.Render(status, &lora_render2.HtmlRender{
+	err := ctx.Render(status, &lora_render.HtmlRender{
 		IsTemplate: true,
 		Name:       name,
 		Data:       data,
