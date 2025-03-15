@@ -61,15 +61,53 @@ func Update(dataSourceName string) {
 	user.UserName = "mszlu11111111111"
 	user.Password = "123456111"
 	user.Age = 3011
-	update, err := db.NewSession().SetTableName("user").Where("id", 1).Where("age", 44).Update(user)
+	update, err := db.NewSession().SetTableName("user").Where("id", 1).And().Where("age", 44).Update(user)
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println(update)
 }
+func QueryUser(dataSourceName string) {
+	db, err := lora_orm.Open("mysql", dataSourceName)
+	if err != nil {
+		panic(err)
+	}
+	user := &User{}
+	err = db.NewSession().SetTableName("user").Where("id", 1).SelectOne(user)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(user)
+}
+func QueryUsers(dataSourceName string) {
+	db, err := lora_orm.Open("mysql", dataSourceName)
+	if err != nil {
+		panic(err)
+	}
+	user := &User{}
+	users, err := db.NewSession().SetTableName("user").Where("age", 30).OrderDesc("age").Select(user)
+	if err != nil {
+		panic(err)
+	}
+	for _, u := range users {
+		fmt.Println(u.(*User))
+	}
+}
+func DeleteUser(dataSourceName string) {
+	db, err := lora_orm.Open("mysql", dataSourceName)
+	if err != nil {
+		panic(err)
+	}
+	_, err = db.NewSession().SetTableName("user").Where("id", 1).Delete()
+	if err != nil {
+		panic(err)
+	}
+}
 func TestInsert(t *testing.T) {
 	dataSourceName := fmt.Sprintf("root:kylin.2023@tcp(localhost:3306)/lora_go?charset=utf8&loc=%s&parseTime=true", url.QueryEscape("Asia/Shanghai"))
 	//SaveUser(dataSourceName)
 	//BatchInsertUser(dataSourceName)
-	Update(dataSourceName)
+	//QueryUser(dataSourceName)
+	//DeleteUser(dataSourceName)
+	QueryUsers(dataSourceName)
 }

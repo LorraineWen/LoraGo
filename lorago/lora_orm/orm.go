@@ -7,6 +7,7 @@ package lora_orm
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"github.com/LorraineWen/lorago/lora_log"
 	"reflect"
 	"strings"
@@ -77,6 +78,7 @@ type Session struct {
 	updateValues []any           //update参数的值
 	updateParam  strings.Builder //update参数
 	whereParam   strings.Builder //where关键字的参数
+	whereValues  []any           //where关键字的参数的值
 }
 
 func (session *Session) SetTableName(tableName string) *Session {
@@ -242,4 +244,24 @@ func (session *Session) getBatchFieldNames(dataArray []any) {
 		}
 	}
 	session.values = allValues
+}
+
+// 三组原语
+func (session *Session) Where(field string, data any) *Session {
+	fmt.Println("string:", session.whereParam.String())
+	if session.whereParam.String() == "" {
+		session.whereParam.WriteString(" where ")
+	}
+	session.whereParam.WriteString(field)
+	session.whereParam.WriteString(" = ?")
+	session.whereValues = append(session.whereValues, data)
+	return session
+}
+func (session *Session) And() *Session {
+	session.whereParam.WriteString(" and ")
+	return session
+}
+func (session *Session) Or() *Session {
+	session.whereParam.WriteString(" or ")
+	return session
 }
