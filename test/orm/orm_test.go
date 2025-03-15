@@ -52,8 +52,24 @@ func BatchInsertUser(dataSourceName string) {
 	}
 	fmt.Println(id, aff, users)
 }
+func Update(dataSourceName string) {
+	db, err := lora_orm.Open("mysql", dataSourceName)
+	if err != nil {
+		panic(err)
+	}
+	user := &User{}
+	user.UserName = "mszlu11111111111"
+	user.Password = "123456111"
+	user.Age = 3011
+	update, err := db.NewSession().SetTableName("user").Where("id", 1).Where("age", 44).Update(user)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(update)
+}
 func TestInsert(t *testing.T) {
 	dataSourceName := fmt.Sprintf("root:kylin.2023@tcp(localhost:3306)/lora_go?charset=utf8&loc=%s&parseTime=true", url.QueryEscape("Asia/Shanghai"))
 	//SaveUser(dataSourceName)
-	BatchInsertUser(dataSourceName)
+	//BatchInsertUser(dataSourceName)
+	Update(dataSourceName)
 }
