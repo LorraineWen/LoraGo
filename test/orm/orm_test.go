@@ -103,11 +103,23 @@ func DeleteUser(dataSourceName string) {
 		panic(err)
 	}
 }
+func GetTableTotalCount(dataSourceName string) {
+	db, err := lora_orm.Open("mysql", dataSourceName)
+	if err != nil {
+		panic(err)
+	}
+	count, err := db.NewSession().SetTableName("user").TotalCount()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(count)
+}
 func TestInsert(t *testing.T) {
 	dataSourceName := fmt.Sprintf("root:kylin.2023@tcp(localhost:3306)/lora_go?charset=utf8&loc=%s&parseTime=true", url.QueryEscape("Asia/Shanghai"))
 	//SaveUser(dataSourceName)
 	//BatchInsertUser(dataSourceName)
 	//QueryUser(dataSourceName)
 	//DeleteUser(dataSourceName)
-	QueryUsers(dataSourceName)
+	//QueryUsers(dataSourceName)
+	GetTableTotalCount(dataSourceName)
 }

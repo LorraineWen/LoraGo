@@ -5,6 +5,10 @@ import (
 	"strings"
 )
 
+/*
+*@Author: LorraineWen
+*支持条件删除
+ */
 func (session *Session) Delete() (int64, error) {
 	query := fmt.Sprintf("delete from %s ", session.TableName)
 	var sb strings.Builder

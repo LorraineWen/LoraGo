@@ -71,6 +71,8 @@ func (db *Db) NewSession() *Session {
 
 type Session struct {
 	db           *Db
+	tx           *sql.Tx //事务实体
+	txStatus     bool    //事务的状态
 	TableName    string
 	fieldName    []string        //表的字段名
 	placeHolder  []string        //字段占位符

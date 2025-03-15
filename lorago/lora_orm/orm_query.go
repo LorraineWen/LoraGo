@@ -3,6 +3,7 @@ package lora_orm
 /*
 *@Author: LorraineWen
 *支持查询后直接赋值给结构体对象，支持多行查询，支持只返回指定的字段值
+*支持模糊查询、分组查询、排序查询
  */
 import (
 	"errors"
@@ -160,54 +161,54 @@ func (session *Session) Select(data any, fields ...string) ([]any, error) {
 }
 
 // 模糊查询
-func (s *Session) Like(field string, data any) *Session {
-	if s.whereParam.String() == "" {
-		s.whereParam.WriteString(" where ")
+func (session *Session) Like(field string, data any) *Session {
+	if session.whereParam.String() == "" {
+		session.whereParam.WriteString(" where ")
 	}
-	s.whereParam.WriteString(field)
-	s.whereParam.WriteString(" like ?")
+	session.whereParam.WriteString(field)
+	session.whereParam.WriteString(" like ?")
 
-	s.values = append(s.values, "%"+data.(string)+"%")
-	return s
+	session.values = append(session.values, "%"+data.(string)+"%")
+	return session
 }
 
 // 分组查询
-func (s *Session) Group(field ...string) *Session {
-	s.whereParam.WriteString(" group by ")
-	s.whereParam.WriteString(strings.Join(field, ","))
-	return s
+func (session *Session) Group(field ...string) *Session {
+	session.whereParam.WriteString(" group by ")
+	session.whereParam.WriteString(strings.Join(field, ","))
+	return session
 }
 
 // 降序查询
-func (s *Session) OrderDesc(field ...string) *Session {
-	s.whereParam.WriteString(" order by ")
-	s.whereParam.WriteString(strings.Join(field, ","))
-	s.whereParam.WriteString(" desc ")
-	return s
+func (session *Session) OrderDesc(field ...string) *Session {
+	session.whereParam.WriteString(" order by ")
+	session.whereParam.WriteString(strings.Join(field, ","))
+	session.whereParam.WriteString(" desc ")
+	return session
 }
 
 // 升序查询
-func (s *Session) OrderAsc(field ...string) *Session {
-	s.whereParam.WriteString(" order by ")
-	s.whereParam.WriteString(strings.Join(field, ","))
-	s.whereParam.WriteString(" asc ")
-	return s
+func (session *Session) OrderAsc(field ...string) *Session {
+	session.whereParam.WriteString(" order by ")
+	session.whereParam.WriteString(strings.Join(field, ","))
+	session.whereParam.WriteString(" asc ")
+	return session
 }
 
 // order by score asc,age desc，按照分数升序和年龄降序两种条件查询
-func (s *Session) Order(field ...string) *Session {
-	s.whereParam.WriteString(" order by ")
+func (session *Session) Order(field ...string) *Session {
+	session.whereParam.WriteString(" order by ")
 	size := len(field)
 	if size%2 != 0 {
 		panic("Order field must be even")
 	}
 	for index, v := range field {
-		s.whereParam.WriteString(" ")
-		s.whereParam.WriteString(v)
-		s.whereParam.WriteString(" ")
+		session.whereParam.WriteString(" ")
+		session.whereParam.WriteString(v)
+		session.whereParam.WriteString(" ")
 		if index%2 != 0 && index < len(field)-1 {
-			s.whereParam.WriteString(",")
+			session.whereParam.WriteString(",")
 		}
 	}
-	return s
+	return session
 }
