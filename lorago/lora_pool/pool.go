@@ -72,11 +72,11 @@ func (p *Pool) expireWorker() {
 			break
 		}
 		p.workerLock.Lock()
-		freeWorkers := p.workers
-		n := len(freeWorkers) - 1
+		idleWorkers := p.workers
+		n := len(idleWorkers) - 1
 		if n >= 0 {
 			var clearN = -1
-			for i, w := range freeWorkers {
+			for i, w := range idleWorkers {
 				//如果wroker的最后执行任务时间和当前时间的差值小于expire就释放掉
 				if time.Now().Sub(w.lastTaskTime) <= p.expireTime {
 					break
@@ -84,13 +84,13 @@ func (p *Pool) expireWorker() {
 				//需要清除的
 				clearN = i
 				w.taskChannel <- nil
-				freeWorkers[i] = nil
+				idleWorkers[i] = nil
 			}
 			if clearN != -1 {
-				if clearN >= len(freeWorkers)-1 {
-					p.workers = freeWorkers[:0]
+				if clearN >= len(idleWorkers)-1 {
+					p.workers = idleWorkers[:0]
 				} else {
-					p.workers = freeWorkers[clearN+1:]
+					p.workers = idleWorkers[clearN+1:]
 				}
 				fmt.Printf("清除完成,running:%d, workers:%v \n", p.runningWorkerNum, p.workers)
 			}
@@ -136,9 +136,9 @@ func (p *Pool) GetWorker() (w *Worker) {
 	}
 	p.workerLock.Unlock()
 	//4. 如果正在运行的workers 如果大于pool容量，阻塞等待，worker释放
-	return p.waitFreeWorker()
+	return p.waitIdleWorker()
 }
-func (p *Pool) waitFreeWorker() *Worker {
+func (p *Pool) waitIdleWorker() *Worker {
 	p.workerLock.Lock()
 	p.workerCon.Wait()
 
@@ -161,7 +161,7 @@ func (p *Pool) waitFreeWorker() *Worker {
 			w.run()
 			return w
 		}
-		return p.waitFreeWorker()
+		return p.waitIdleWorker()
 	}
 	w := idleWorkers[n]
 	idleWorkers[n] = nil
@@ -220,6 +220,6 @@ func (p *Pool) Restart() bool {
 func (p *Pool) GetRunningNum() int {
 	return int(atomic.LoadInt32(&p.runningWorkerNum))
 }
-func (p *Pool) GetFreeNum() int {
+func (p *Pool) GetIdleNum() int {
 	return int(p.capacity - p.runningWorkerNum)
 }
